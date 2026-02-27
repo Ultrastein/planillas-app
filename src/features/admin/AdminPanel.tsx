@@ -1,45 +1,46 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { useAuthStore } from '../../store/useAuthStore';
 import styles from './AdminPanel.module.css';
-import { Shield, KeyRound, UserPlus } from 'lucide-react';
-
-interface UserData {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-    last_access?: string;
-}
+import { Shield, KeyRound, UserPlus, Trash2, Users } from 'lucide-react';
 
 export function AdminPanel() {
-    const { profile } = useAuthStore();
-    const [users, setUsers] = useState<UserData[]>([]);
+    const { profile: currentUser } = useAuthStore();
+    const [users, setUsers] = useState<any[]>([]);
+    const [deletedDocs, setDeletedDocs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'users' | 'trash'>('users');
 
     // Form State
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [newUserEmail, setNewUserEmail] = useState('');
     const [newUserName, setNewUserName] = useState('');
-    const [newUserRole, setNewUserRole] = useState('colaborador');
+    const [newUserRole, setNewUserRole] = useState<'titular' | 'colaborador' | 'admin'>('colaborador');
     const [newUserPwd, setNewUserPwd] = useState('');
 
     const [selectedUserForPwd, setSelectedUserForPwd] = useState<string | null>(null);
     const [newPasswordForUser, setNewPasswordForUser] = useState('');
 
     useEffect(() => {
-        fetchUsers();
-    }, []);
+        fetchData();
+    }, [activeTab]);
 
-    const fetchUsers = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase.from('users').select('*').order('name', { ascending: true });
-            if (error) throw error;
-            setUsers(data || []);
+            if (activeTab === 'users') {
+                const { data, error } = await supabase.from('users').select('*').order('name');
+                if (error) throw error;
+                setUsers(data || []);
+            } else {
+                const { data, error } = await supabase.from('documents').select('*').eq('status', 'deleted').order('created_at', { ascending: false });
+                if (error) throw error;
+                setDeletedDocs(data || []);
+            }
         } catch (err: any) {
-            setError('Error al cargar usuarios: ' + err.message);
+            setError('Error al cargar datos: ' + err.message);
         } finally {
             setLoading(false);
         }
@@ -49,35 +50,31 @@ export function AdminPanel() {
         e.preventDefault();
         setError(null);
         try {
-            // In a real Supabase setup, creating a new user from client securely requires the Admin API.
-            // But we can simulate sign up or use edge functions. Let's assume we use signUp.
-            // Since normal signUp logs the user in, for a strict admin panel, one would use Supabase Edge Functions or Admin API in node.
-            // As a UI demo, we'll try to insert the profile if the auth creation is handled backend, 
-            // but for pure frontend demo we'll use a mocked API call or signUp if allowed.
+            if (!import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
+                alert('Atención: VITE_SUPABASE_SERVICE_ROLE_KEY no está configurada, la creación en auth.users fallará o no será posible. Intenta configurarla en el .env');
+            }
 
-            const { data, error: authError } = await supabase.auth.signUp({
+            // Crear usuario en Auth (usando admin API para no afectar sesión local)
+            const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
                 email: newUserEmail,
                 password: newUserPwd,
-                options: {
-                    data: { full_name: newUserName }
-                }
+                email_confirm: true,
+                user_metadata: { name: newUserName }
             });
+
             if (authError) throw authError;
 
-            if (data.user) {
-                // Insert into users table
-                const { error: dbError } = await supabase.from('users').insert({
-                    id: data.user.id,
-                    email: newUserEmail,
-                    name: newUserName,
+            // Update en public.users para fijar el rol (el trigger de Supabase hace el insert por defecto como colaborador)
+            if (authData.user) {
+                const { error: dbError } = await supabase.from('users').update({
                     role: newUserRole
-                });
+                }).eq('id', authData.user.id);
                 if (dbError) throw dbError;
             }
 
             setShowCreateForm(false);
             setNewUserEmail(''); setNewUserName(''); setNewUserPwd('');
-            fetchUsers();
+            fetchData();
         } catch (err: any) {
             setError(err.message || 'Error al crear usuario');
         }
@@ -89,35 +86,33 @@ export function AdminPanel() {
         if (!selectedUserForPwd) return;
 
         try {
-            // Note: Changing ANOTHER user's password directly from the client requires Supabase Admin API.
-            // We will perform a Supabase API call (mocked or edge function in production).
-            // Here we document the intent based on requirements:
-            // "El Administrador pueda efectivamente cambiar claves de terceros."
-            const { error } = await supabase.rpc('admin_reset_user_password', {
-                target_user_id: selectedUserForPwd,
-                new_password: newPasswordForUser
-            });
-
-            if (error) {
-                // Fallback for demo when RPC isn't available
-                console.warn("RPC not available, simulating password change.");
-                // alert(`Simulado: Contraseña cambiada para ${users.find(u => u.id === selectedUserForPwd)?.name}`);
+            // Utilizamos el RPC en caso no haya Service Role Key, o supabaseAdmin si la hay.
+            if (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
+                const { error } = await supabaseAdmin.auth.admin.updateUserById(selectedUserForPwd, { password: newPasswordForUser });
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.rpc('admin_reset_user_password', {
+                    target_user_id: selectedUserForPwd,
+                    new_password: newPasswordForUser
+                });
+                if (error) throw error;
             }
 
             setSelectedUserForPwd(null);
             setNewPasswordForUser('');
             alert("Contraseña actualizada exitosamente.");
+            fetchData();
         } catch (err: any) {
             setError(err.message);
         }
     };
 
-    if (profile?.role !== 'admin') {
+    if (currentUser?.role !== 'admin') {
         return (
             <div className={styles.unauthorized}>
                 <Shield size={48} color="var(--danger-color)" />
                 <h2>Acceso Denegado</h2>
-                <p>Solo el Master Control tiene permisos para ver esta sección.</p>
+                <p>Solo el Administrador tiene permisos para ver esta sección.</p>
             </div>
         );
     }
@@ -126,97 +121,149 @@ export function AdminPanel() {
         <div className={styles.adminContainer}>
             <header className={styles.adminHeader}>
                 <div>
-                    <h2>Master Control</h2>
-                    <p>Gestión de Usuarios y Accesos</p>
+                    <h2>Panel de Administrador</h2>
+                    <p>Gestión de Personal y Registros del Sistema</p>
                 </div>
-                <button className={styles.btnPrimary} onClick={() => setShowCreateForm(true)}>
-                    <UserPlus size={18} /> Nuevo Usuario
-                </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                        className={activeTab === 'users' ? styles.btnPrimary : styles.btnSecondary}
+                        onClick={() => setActiveTab('users')}
+                    >
+                        <Users size={18} /> Personal
+                    </button>
+                    <button
+                        className={activeTab === 'trash' ? styles.btnPrimary : styles.btnSecondary}
+                        onClick={() => setActiveTab('trash')}
+                    >
+                        <Trash2 size={18} /> Papelera
+                    </button>
+                    {activeTab === 'users' && (
+                        <button className={styles.btnPrimary} onClick={() => setShowCreateForm(true)}>
+                            <UserPlus size={18} /> Nuevo Usuario
+                        </button>
+                    )}
+                </div>
             </header>
 
             {error && <div className={styles.errorBanner}>{error}</div>}
 
-            {showCreateForm && (
-                <form className={styles.formCard} onSubmit={handleCreateUser}>
-                    <h3>Crear Nuevo Usuario</h3>
-                    <div className={styles.formRow}>
-                        <input required placeholder="Nombre Completo" value={newUserName} onChange={e => setNewUserName(e.target.value)} />
-                        <input required type="email" placeholder="Email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
+            {activeTab === 'users' && (
+                <>
+                    {showCreateForm && (
+                        <form className={styles.formCard} onSubmit={handleCreateUser}>
+                            <h3>Crear Nuevo Usuario</h3>
+                            <div className={styles.formRow}>
+                                <input required placeholder="Nombre Completo" value={newUserName} onChange={e => setNewUserName(e.target.value)} />
+                                <input required type="text" placeholder="Email o Usuario" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
+                            </div>
+                            <div className={styles.formRow}>
+                                <input required type="password" placeholder="Contraseña Inicial" value={newUserPwd} onChange={e => setNewUserPwd(e.target.value)} />
+                                <select value={newUserRole} onChange={e => setNewUserRole(e.target.value as any)}>
+                                    <option value="titular">Docente Titular (Editor)</option>
+                                    <option value="colaborador">Docente Visualizador (Lector)</option>
+                                    <option value="admin">Administrador</option>
+                                </select>
+                            </div>
+                            <div className={styles.formActions}>
+                                <button type="button" className={styles.btnSecondary} onClick={() => setShowCreateForm(false)}>Cancelar</button>
+                                <button type="submit" className={styles.btnPrimary}>Crear</button>
+                            </div>
+                        </form>
+                    )}
+
+                    {selectedUserForPwd && (
+                        <form className={styles.formCard} onSubmit={handleChangePassword}>
+                            <h3>Cambiar Contraseña: {users.find(u => u.id === selectedUserForPwd)?.name}</h3>
+                            <div className={styles.formRow}>
+                                <input
+                                    required
+                                    type="password"
+                                    placeholder="Nueva Contraseña"
+                                    value={newPasswordForUser}
+                                    onChange={e => setNewPasswordForUser(e.target.value)}
+                                />
+                                <button type="submit" className={styles.btnDanger}>Forzar Cambio</button>
+                                <button type="button" className={styles.btnSecondary} onClick={() => setSelectedUserForPwd(null)}>Cancelar</button>
+                            </div>
+                        </form>
+                    )}
+
+                    <div className={styles.userTableContainer}>
+                        <table className={styles.userTable}>
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Email / Login</th>
+                                    <th>Rol</th>
+                                    <th>Tipo Auth</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Cargando usuarios...</td></tr>
+                                ) : users.map(u => (
+                                    <tr key={u.id}>
+                                        <td>
+                                            <div className={styles.userInfoCell}>
+                                                <div className={styles.avatar}>{u.name.charAt(0).toUpperCase()}</div>
+                                                <span>{u.name}</span>
+                                            </div>
+                                        </td>
+                                        <td>{u.email}</td>
+                                        <td>
+                                            <span className={`${styles.roleBadge} ${styles[u.role]}`}>
+                                                {u.role === 'titular' ? 'Editor' : u.role === 'colaborador' ? 'Visualizador' : 'Admin'}
+                                            </span>
+                                        </td>
+                                        <td>{u.auth_provider === 'local' ? 'Manual' : 'Google'}</td>
+                                        <td>
+                                            {u.auth_provider === 'local' && (
+                                                <button
+                                                    className={styles.keyBtn}
+                                                    onClick={() => setSelectedUserForPwd(u.id)}
+                                                    title="Cambiar Contraseña"
+                                                >
+                                                    <KeyRound size={16} />
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                    <div className={styles.formRow}>
-                        <input required type="password" placeholder="Contraseña Inicial" value={newUserPwd} onChange={e => setNewUserPwd(e.target.value)} />
-                        <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
-                            <option value="titular">Docente Titular</option>
-                            <option value="colaborador">Colaborador</option>
-                            <option value="admin">Administrador</option>
-                        </select>
-                    </div>
-                    <div className={styles.formActions}>
-                        <button type="button" className={styles.btnSecondary} onClick={() => setShowCreateForm(false)}>Cancelar</button>
-                        <button type="submit" className={styles.btnPrimary}>Crear</button>
-                    </div>
-                </form>
+                </>
             )}
 
-            {selectedUserForPwd && (
-                <form className={styles.formCard} onSubmit={handleChangePassword}>
-                    <h3>Cambiar Contraseña: {users.find(u => u.id === selectedUserForPwd)?.name}</h3>
-                    <div className={styles.formRow}>
-                        <input
-                            required
-                            type="password"
-                            placeholder="Nueva Contraseña"
-                            value={newPasswordForUser}
-                            onChange={e => setNewPasswordForUser(e.target.value)}
-                        />
-                        <button type="submit" className={styles.btnDanger}>Forzar Cambio</button>
-                        <button type="button" className={styles.btnSecondary} onClick={() => setSelectedUserForPwd(null)}>Cancelar</button>
-                    </div>
-                </form>
-            )}
-
-            <div className={styles.userTableContainer}>
-                <table className={styles.userTable}>
-                    <thead>
-                        <tr>
-                            <th>Usuario</th>
-                            <th>Email</th>
-                            <th>Rol</th>
-                            <th>Último Acceso</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Cargando usuarios...</td></tr>
-                        ) : users.map(user => (
-                            <tr key={user.id}>
-                                <td>
-                                    <div className={styles.userInfoCell}>
-                                        <div className={styles.avatar}>{user.name.charAt(0).toUpperCase()}</div>
-                                        <span>{user.name}</span>
-                                    </div>
-                                </td>
-                                <td>{user.email}</td>
-                                <td>
-                                    <span className={`${styles.roleBadge} ${styles[user.role]}`}>{user.role}</span>
-                                </td>
-                                <td className={styles.metaText}>{user.last_access ? new Date(user.last_access).toLocaleDateString() : 'Nunca'}</td>
-                                <td>
-                                    <button
-                                        className={styles.keyBtn}
-                                        onClick={() => setSelectedUserForPwd(user.id)}
-                                        title="Cambiar Contraseña"
-                                    >
-                                        <KeyRound size={16} />
-                                    </button>
-                                    {/* Additional Actions like Delete or Audit can go here */}
-                                </td>
+            {activeTab === 'trash' && (
+                <div className={styles.userTableContainer}>
+                    <table className={styles.userTable}>
+                        <thead>
+                            <tr>
+                                <th>Documento Eliminado</th>
+                                <th>Autor</th>
+                                <th>Fecha Recreación</th>
+                                <th>Motivo de Borrado</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>Cargando papelera...</td></tr>
+                            ) : deletedDocs.length === 0 ? (
+                                <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>No hay planillas eliminadas.</td></tr>
+                            ) : deletedDocs.map(doc => (
+                                <tr key={doc.id}>
+                                    <td><strong>{doc.title}</strong><br /><small>{doc.file_type}</small></td>
+                                    <td>{doc.author_name} ({doc.author_role})</td>
+                                    <td>{new Date(doc.created_at).toLocaleDateString()}</td>
+                                    <td style={{ color: 'var(--danger-color)', fontStyle: 'italic' }}>"{doc.delete_reason}"</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 }

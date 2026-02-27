@@ -21,7 +21,7 @@ describe('AdminPanel Master Control', () => {
 
     it('declines access if user is not admin', () => {
         useAuthStore.setState({
-            profile: { id: '2', email: 'test@edu.ar', name: 'Docente', role: 'titular' },
+            profile: { id: '2', email: 'test@edu.ar', name: 'Docente', role: 'titular', auth_provider: 'local' },
         });
 
         render(<AdminPanel />);
@@ -30,7 +30,7 @@ describe('AdminPanel Master Control', () => {
 
     it('renders correctly for admin users', async () => {
         useAuthStore.setState({
-            profile: { id: '1', email: 'admin@edu.ar', name: 'Admin', role: 'admin' },
+            profile: { id: '1', email: 'admin@edu.ar', name: 'Admin', role: 'admin', auth_provider: 'local' },
         });
 
         render(<AdminPanel />);
@@ -40,7 +40,7 @@ describe('AdminPanel Master Control', () => {
 
     it('opens create user form and submits', async () => {
         useAuthStore.setState({
-            profile: { id: '1', email: 'admin@edu.ar', name: 'Admin', role: 'admin' },
+            profile: { id: '1', email: 'admin@edu.ar', name: 'Admin', role: 'admin', auth_provider: 'local' },
         });
 
         // Mock successful signup
@@ -86,7 +86,7 @@ describe('AdminPanel Master Control', () => {
 
     it('allows changing a users password', async () => {
         useAuthStore.setState({
-            profile: { id: '1', email: 'admin@edu.ar', name: 'Admin', role: 'admin' },
+            profile: { id: '1', email: 'admin@edu.ar', name: 'Admin', role: 'admin', auth_provider: 'local' },
         });
 
         // Override fetch mock to return a user to click

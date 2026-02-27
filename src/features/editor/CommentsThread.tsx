@@ -1,38 +1,63 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useDocumentStore } from '../../store/useDocumentStore';
+import { supabase } from '../../lib/supabase';
 import { MessageSquare, Send, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import styles from './CommentsThread.module.css';
 
-interface Comment {
-    id: string;
-    text: string;
-    authorName: string;
-    authorRole: string;
-    createdAt: Date;
-}
-
 export function CommentsThread() {
-    const { profile } = useAuthStore();
-    const [comments, setComments] = useState<Comment[]>([]);
+    const { profile: user } = useAuthStore();
+    const { selectedDocId } = useDocumentStore();
+    const [comments, setComments] = useState<any[]>([]);
     const [newComment, setNewComment] = useState('');
 
-    const handleAddComment = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newComment.trim() || !profile) return;
+    useEffect(() => {
+        if (selectedDocId) {
+            fetchComments();
+        } else {
+            setComments([]);
+        }
+    }, [selectedDocId]);
 
-        const comment: Comment = {
-            id: crypto.randomUUID(),
-            text: newComment,
-            authorName: profile.name,
-            authorRole: profile.role,
-            createdAt: new Date(),
-        };
-
-        setComments([...comments, comment]);
-        setNewComment('');
+    const fetchComments = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('comments')
+                .select('*')
+                .eq('document_id', selectedDocId)
+                .order('created_at', { ascending: true });
+            if (error) throw error;
+            setComments(data || []);
+        } catch (err) {
+            console.error(err);
+        }
     };
+
+    const handleAddComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newComment.trim() || !user || !selectedDocId) return;
+
+        try {
+            const comment = {
+                document_id: selectedDocId,
+                text: newComment,
+                author_id: user.id,
+                author_name: user.name,
+            };
+
+            const { error } = await supabase.from('comments').insert(comment);
+            if (error) throw error;
+
+            setNewComment('');
+            fetchComments();
+        } catch (err) {
+            console.error('Error adding comment', err);
+        }
+    };
+
+    if (!selectedDocId) return null;
 
     return (
         <div className={styles.container}>
@@ -52,10 +77,9 @@ export function CommentsThread() {
                                     <User size={14} />
                                 </div>
                                 <div className={styles.authorInfo}>
-                                    <span className={styles.authorName}>{c.authorName}</span>
-                                    <span className={styles.authorRole}>{c.authorRole}</span>
+                                    <span className={styles.authorName}>{c.author_name}</span>
                                 </div>
-                                <span className={styles.time}>{formatDistanceToNow(c.createdAt, { addSuffix: true, locale: es })}</span>
+                                <span className={styles.time}>{formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: es })}</span>
                             </div>
                             <p className={styles.commentText}>{c.text}</p>
                         </div>

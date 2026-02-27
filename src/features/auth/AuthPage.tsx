@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { GoogleLogin } from '@react-oauth/google';
 import { supabase } from '../../lib/supabase';
-import { useAuthStore } from '../../store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 import styles from './AuthPage.module.css';
 
@@ -16,7 +16,6 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export function AuthPage() {
     const navigate = useNavigate();
-    const { setUser, setProfile } = useAuthStore();
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -33,60 +32,17 @@ export function AuthPage() {
     const onSubmit = async (data: LoginForm) => {
         setLoading(true);
         setError(null);
-        
+
         try {
-            // Mock Login for Admin
-            if (data.email === 'admin' && data.password === 'admin') {
-                const mockProfile = { id: 'admin-123', email: 'admin@eduplan.pro', name: 'Administrador', role: 'admin' as const };
-                const mockUser = { id: 'admin-123', email: 'admin@eduplan.pro', user_metadata: { full_name: 'Administrador' } } as any;
-                localStorage.setItem('mock_auth', JSON.stringify(mockProfile));
-                setUser(mockUser);
-                setProfile(mockProfile);
-                enterFullscreen();
-                navigate('/');
-                return;
-            }
-
-            // Mock Login for Docente
-            if (data.email === 'docente' && data.password === 'docente') {
-                const mockProfile = { id: 'docente-123', email: 'docente@eduplan.pro', name: 'Docente', role: 'titular' as const };
-                const mockUser = { id: 'docente-123', email: 'docente@eduplan.pro', user_metadata: { full_name: 'Docente' } } as any;
-                localStorage.setItem('mock_auth', JSON.stringify(mockProfile));
-                setUser(mockUser);
-                setProfile(mockProfile);
-                enterFullscreen();
-                navigate('/');
-                return;
-            }
-
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            const { error: signInError } = await supabase.auth.signInWithPassword({
                 email: data.email,
                 password: data.password,
             });
 
-            if (authError) throw authError;
+            if (signInError) throw signInError;
 
-            if (authData.user) {
-                const { data: profileData } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('id', authData.user.id)
-                    .single();
-
-                setUser(authData.user);
-                if (profileData) {
-                    setProfile(profileData);
-                } else {
-                    setProfile({
-                        id: authData.user.id,
-                        email: authData.user.email!,
-                        name: authData.user.user_metadata?.full_name || authData.user.email!.split('@')[0],
-                        role: 'titular',
-                    });
-                }
-                enterFullscreen();
-                navigate('/');
-            }
+            enterFullscreen();
+            navigate('/');
         } catch (err: any) {
             if (err.message?.includes('Invalid login credentials')) {
                 setError('Credenciales inválidas. Si usaste Google originalmente, por favor haz clic en "Acceder con Google".');
@@ -98,26 +54,22 @@ export function AuthPage() {
         }
     };
 
-    const handleGoogleLogin = async () => {
-        setError(null);
+    const handleGoogleSuccess = async (credentialResponse: any) => {
         try {
-            const { error } = await supabase.auth.signInWithOAuth({
+            if (!credentialResponse.credential) throw new Error('No credential available');
+
+            const { error: authError } = await supabase.auth.signInWithIdToken({
                 provider: 'google',
-                options: {
-                    redirectTo: window.location.origin,
-                }
+                token: credentialResponse.credential,
             });
-            if (error) throw error;
-        } catch (err: any) {
-            console.log('Google Auth Error from Backend, using Mock Auth for preview:', err.message);
-            // Mock Fallback for Google since backend is not configured properly yet
-            const mockProfile = { id: 'google-mock', email: 'usuario.google@gmail.com', name: 'Usuario Google', role: 'titular' as const };
-            const mockUser = { id: 'google-mock', email: 'usuario.google@gmail.com', user_metadata: { full_name: 'Usuario Google' } } as any;
-            localStorage.setItem('mock_auth', JSON.stringify(mockProfile));
-            setUser(mockUser);
-            setProfile(mockProfile);
+
+            if (authError) throw authError;
+
             enterFullscreen();
             navigate('/');
+        } catch (error: any) {
+            console.error(error);
+            setError('Fallo la autenticación con Google: ' + (error.message || 'Error desconocido'));
         }
     };
 
@@ -129,14 +81,17 @@ export function AuthPage() {
                     <p>Gestión avanzada de planificaciones docentes</p>
                 </div>
 
-                <button
-                    className={styles.googleBtn}
-                    onClick={handleGoogleLogin}
-                    type="button"
-                >
-                    <img src="https://www.google.com/favicon.ico" alt="Google" width={18} height={18} />
-                    <span>Acceder con Google</span>
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => {
+                            setError('El inicio de sesión con Google falló');
+                        }}
+                        theme="outline"
+                        text="signin_with"
+                        shape="rectangular"
+                    />
+                </div>
 
                 <div className={styles.divider}>
                     <span>O ingresa con tus credenciales</span>
