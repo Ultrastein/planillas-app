@@ -1,7 +1,7 @@
 -- SQL Script to set up EduPlan Pro Database Structure
 
 -- 1. Create Users Table
-CREATE TABLE public.users (
+CREATE TABLE IF NOT EXISTS public.users (
   id uuid references auth.users not null primary key,
   email text unique not null,
   name text not null,
@@ -14,10 +14,27 @@ CREATE TABLE public.users (
 alter table public.users enable row level security;
 
 -- Policies for users
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.users;
 create policy "Public profiles are viewable by everyone."
   on users for select
   to authenticated
   using ( true );
+
+-- Function to safely get user role bypassing RLS (prevents infinite recursion)
+create or replace function public.get_user_role()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  user_role text;
+begin
+  -- By being security definer, this bypasses RLS on public.users
+  select role into user_role from public.users where id = auth.uid();
+  return user_role;
+end;
+$$;
 
 -- Trigger to automatically create a public.user on auth.users insert
 create or replace function public.handle_new_user()
@@ -32,14 +49,19 @@ begin
     coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     'colaborador', -- default role
     case when new.raw_app_meta_data->>'provider' = 'google' then 'google' else 'local' end
-  );
+  )
+  on conflict (id) do nothing;
   return new;
 end;
 $$;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+DROP POLICY IF EXISTS "Users can insert their own profile." ON public.users;
+DROP POLICY IF EXISTS "Admins can insert and update profiles." ON public.users;
 
 create policy "Users can insert their own profile."
   on users for insert
@@ -49,10 +71,10 @@ create policy "Users can insert their own profile."
 create policy "Admins can insert and update profiles."
   on users for all
   to authenticated
-  using ( (select role from users where id = auth.uid()) = 'admin' );
+  using ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );
 
 -- 2. Create Documents Table
-CREATE TABLE public.documents (
+CREATE TABLE IF NOT EXISTS public.documents (
   id uuid default gen_random_uuid() primary key,
   title text not null,
   author_id uuid references public.users(id) not null,
@@ -63,29 +85,40 @@ CREATE TABLE public.documents (
   file_url text,
   content text,
   status text not null default 'active' check (status in ('active', 'deleted')),
-  delete_reason text
+  delete_reason text,
+  curso text,
+  grado text,
+  anio text,
+  carga_horaria text,
+  tematica text,
+  num_clase text,
+  recursos text
 );
 
 alter table public.documents enable row level security;
 
 -- Policies for documents
+DROP POLICY IF EXISTS "Active documents viewable by all authenticated users" ON public.documents;
+DROP POLICY IF EXISTS "Admins and Titulares can insert documents" ON public.documents;
+DROP POLICY IF EXISTS "Authors can update their own documents (soft delete)" ON public.documents;
+
 create policy "Active documents viewable by all authenticated users"
   on documents for select
   to authenticated
-  using ( status = 'active' OR (select role from users where id = auth.uid()) = 'admin' );
+  using ( status = 'active' OR coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );
 
 create policy "Admins and Titulares can insert documents"
   on documents for insert
   to authenticated
-  with check ( (select role from users where id = auth.uid()) in ('admin', 'titular') );
+  with check ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) in ('admin', 'titular') );
 
 create policy "Authors can update their own documents (soft delete)"
   on documents for update
   to authenticated
-  using ( author_id = auth.uid() OR (select role from users where id = auth.uid()) = 'admin' );
+  using ( author_id = auth.uid() OR coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );
 
 -- 3. Create Comments Table
-CREATE TABLE public.comments (
+CREATE TABLE IF NOT EXISTS public.comments (
   id uuid default gen_random_uuid() primary key,
   document_id uuid references public.documents(id) not null,
   author_id uuid references public.users(id) not null,
@@ -95,6 +128,9 @@ CREATE TABLE public.comments (
 );
 
 alter table public.comments enable row level security;
+
+DROP POLICY IF EXISTS "Everyone can view comments" ON public.comments;
+DROP POLICY IF EXISTS "Everyone can insert comments" ON public.comments;
 
 create policy "Everyone can view comments"
   on comments for select
@@ -113,8 +149,8 @@ returns void
 language plpgsql security definer
 as $$
 begin
-  -- Check if caller is admin
-  if (select role from public.users where id = auth.uid()) != 'admin' then
+  -- Check if caller is admin (assuming role is in app_metadata)
+  if coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) != 'admin' then
     raise exception 'Unauthorized: Only admins can perform this action';
   end if;
 
@@ -124,3 +160,24 @@ begin
   where id = target_user_id;
 end;
 $$;
+
+-- 5. Create Document Versions Table
+CREATE TABLE IF NOT EXISTS public.document_versions (
+  id uuid default gen_random_uuid() primary key,
+  document_id uuid references public.documents(id) on delete cascade not null,
+  author_id uuid references public.users(id) not null,
+  author_name text not null,
+  content text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.document_versions enable row level security;
+
+DROP POLICY IF EXISTS "Versions viewable by all authenticated users" ON document_versions;
+DROP POLICY IF EXISTS "Titulares and Admins can insert versions" ON document_versions;
+
+create policy "Versions viewable by all authenticated users"
+  on document_versions for select to authenticated using ( true );
+
+create policy "Titulares and Admins can insert versions"
+  on document_versions for insert to authenticated with check ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) IN ('admin', 'titular') );

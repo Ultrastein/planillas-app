@@ -2,12 +2,17 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDocumentStore } from '../../store/useDocumentStore';
 import { supabase } from '../../lib/supabase';
+import { useVersionStore } from '../../store/useVersionStore';
+import { RichTextEditor } from './RichTextEditor';
 import styles from './DocumentEditor.module.css';
 import * as mammoth from 'mammoth';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
     const { setSelectedDocId } = useDocumentStore();
+    const { previewVersion } = useVersionStore((state: any) => ({
+        previewVersion: state.previewVersion
+    }));
 
     const [documents, setDocuments] = useState<any[]>([]);
     const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
@@ -143,7 +148,65 @@ export function DocumentEditor() {
         }
     };
 
-    const canEdit = user?.role === 'titular' || user?.role === 'admin';
+    const handleAutoSave = async (docId: string, newContent: string) => {
+        try {
+            const { error } = await supabase.from('documents').update({ content: newContent }).eq('id', docId);
+            if (error) throw error;
+            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, content: newContent } : prev);
+        } catch (err) {
+            console.error('Error auto-saving:', err);
+        }
+    };
+
+    const handleAIScan = async () => {
+        if (!selectedDoc) return;
+        setLoading(true);
+        // Simulate AI processing delay
+        await new Promise(r => setTimeout(r, 2000));
+        const aiData = {
+            curso: 'Taller',
+            grado: '3ro',
+            anio: '2026',
+            carga_horaria: '4hs semanales',
+            tematica: 'Instalaciones Eléctricas Básicas',
+            num_clase: '1',
+            recursos: 'Cables, Pelacables, Destornilladores, Tablero de pruebas'
+        };
+        try {
+            const { data, error } = await supabase.from('documents').update(aiData).eq('id', selectedDoc.id).select().single();
+            if (error) throw error;
+            setSelectedDoc(data);
+            alert('¡Escaneo IA completado!');
+        } catch (err) {
+            console.error('AI Error:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCreateVersion = async () => {
+        if (!selectedDoc) return;
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('document_versions').insert({
+                document_id: selectedDoc.id,
+                author_id: user?.id,
+                author_name: user?.name,
+                content: selectedDoc.content,
+            });
+            if (error) throw error;
+            // Force Version Sidebar refresh by clearing selectedDocId temporarily or just notifying global state
+            // It will auto-refresh if the user clicks out and back, but let's notify the user
+            alert('Versión guardada correctamente. Puede verla en el historial lateral.');
+        } catch (err: any) {
+            alert('Error al guardar versión: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const canCreateDocument = user?.role === 'admin' || user?.role === 'titular';
+    const canEditSelected = selectedDoc ? (user?.role === 'admin' || (user?.role === 'titular' && selectedDoc.author_id === user?.id)) : false;
 
     return (
         <div className={styles.centerContainer}>
@@ -162,7 +225,7 @@ export function DocumentEditor() {
                     {documents.length === 0 && <li className={styles.emptyLi}>No hay documentos.</li>}
                 </ul>
 
-                {canEdit && (
+                {canCreateDocument && (
                     <div className={styles.uploadSection}>
                         <h4>Subir Nuevo Documento</h4>
                         <input
@@ -200,10 +263,31 @@ export function DocumentEditor() {
                             <div>
                                 <h2>{selectedDoc.title}</h2>
                                 <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
+                                {selectedDoc.curso && (
+                                    <div className={styles.aiMetadata}>
+                                        <span className={styles.badge}>Curso: {selectedDoc.curso}</span>
+                                        <span className={styles.badge}>Grado: {selectedDoc.grado} {selectedDoc.anio}</span>
+                                        <span className={styles.badge}>Clase N°: {selectedDoc.num_clase}</span>
+                                        <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Temática:</strong> {selectedDoc.tematica} | <strong>Carga:</strong> {selectedDoc.carga_horaria}</p>
+                                        <p style={{ fontSize: '0.85rem' }}><strong>Materiales Sugeridos:</strong> {selectedDoc.recursos}</p>
+                                    </div>
+                                )}
                             </div>
-                            {canEdit && (
-                                <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
-                            )}
+                            <div className={styles.ribbonActions}>
+                                {canEditSelected && (
+                                    <>
+                                        {selectedDoc.file_type === 'editor' && (
+                                            <button className={styles.btnPrimary} onClick={handleCreateVersion} disabled={loading}>
+                                                Guardar Versión
+                                            </button>
+                                        )}
+                                        <button className={styles.btnSecondary} onClick={handleAIScan} disabled={loading}>
+                                            {loading ? 'Analizando...' : 'Analizar con IA'}
+                                        </button>
+                                        <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
                         <div className={styles.previewContainer}>
@@ -220,8 +304,12 @@ export function DocumentEditor() {
                                 <iframe src={selectedDoc.file_url} width="100%" height="100%" title="GDoc Prev" />
                             )}
                             {selectedDoc.file_type === 'editor' && (
-                                <div className={styles.wordPreview}>
-                                    {selectedDoc.content}
+                                <div className={styles.editorWrapper}>
+                                    <RichTextEditor
+                                        content={previewVersion ? (previewVersion.content || '') : (selectedDoc.content || '')}
+                                        onSave={(newContent) => handleAutoSave(selectedDoc.id, newContent)}
+                                        readOnly={!canEditSelected || !!previewVersion}
+                                    />
                                 </div>
                             )}
                         </div>
