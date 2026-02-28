@@ -59,6 +59,10 @@ export function AiSidebar() {
                             <span className={styles.metaValue}>{metadata.subject}</span>
                         </div>
                         <div className={styles.metaRow}>
+                            <span className={styles.metaLabel}>Categoría Temática:</span>
+                            <span className={styles.metaValue} style={{ fontWeight: 'bold' }}>{metadata.category}</span>
+                        </div>
+                        <div className={styles.metaRow}>
                             <span className={styles.metaLabel}>Curso:</span>
                             <span className={styles.metaValue}>{metadata.course}</span>
                         </div>

@@ -6,10 +6,17 @@ import { VersionSidebar } from '../features/versions/VersionSidebar';
 import { FeedbackButton } from '../features/feedback/FeedbackButton';
 import { AiSidebar } from '../features/ai/AiSidebar';
 import { CommentsThread } from '../features/editor/CommentsThread';
+import { useNavigationStore } from '../store/useNavigationStore';
+import { useEffect } from 'react';
 
 export function DesktopLayout() {
     const { user, profile, logout } = useAuthStore();
+    const { tabs, fetchTabs } = useNavigationStore();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        fetchTabs();
+    }, [fetchTabs]);
 
     if (!user) {
         return <Navigate to="/auth" replace />;
@@ -28,8 +35,14 @@ export function DesktopLayout() {
                     <div className={styles.navSection}>
                         <h3>Navegación</h3>
                         <ul>
-                            <li onClick={() => navigate('/editor')}><FileText size={14} style={{ marginRight: 8 }} />Año Lectivo 2026</li>
-                            <li onClick={() => navigate('/editor')}><FileText size={14} style={{ marginRight: 8 }} />Taller de Electricidad</li>
+                            {tabs.length > 0 ? tabs.map((tab) => (
+                                <li key={tab.id} onClick={() => navigate(tab.path)}>
+                                    <FileText size={14} style={{ marginRight: 8 }} />
+                                    {tab.label}
+                                </li>
+                            )) : (
+                                <li onClick={() => navigate('/editor')}><FileText size={14} style={{ marginRight: 8 }} />Año Lectivo 2026 (Predeterminado)</li>
+                            )}
                         </ul>
                     </div>
                 </nav>

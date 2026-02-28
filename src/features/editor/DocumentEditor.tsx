@@ -3,20 +3,25 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useDocumentStore } from '../../store/useDocumentStore';
 import { supabase } from '../../lib/supabase';
 import { useVersionStore } from '../../store/useVersionStore';
+import { useCategoryStore } from '../../store/useCategoryStore';
 import { RichTextEditor } from './RichTextEditor';
 import styles from './DocumentEditor.module.css';
 import * as mammoth from 'mammoth';
+import { Folder, FolderOpen, Plus } from 'lucide-react';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
     const { setSelectedDocId } = useDocumentStore();
-    const { previewVersion } = useVersionStore((state: any) => ({
-        previewVersion: state.previewVersion
-    }));
+    const previewVersion = useVersionStore((state: any) => state.previewVersion);
+
+    const { categories, fetchCategories } = useCategoryStore();
 
     const [documents, setDocuments] = useState<any[]>([]);
     const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [showNewCatInput, setShowNewCatInput] = useState(false);
+    const [newCatName, setNewCatName] = useState('');
 
     useEffect(() => {
         setSelectedDocId(selectedDoc?.id || null);
@@ -31,7 +36,8 @@ export function DocumentEditor() {
 
     useEffect(() => {
         fetchDocs();
-    }, []);
+        fetchCategories();
+    }, [fetchCategories]);
 
     const fetchDocs = async () => {
         try {
@@ -161,22 +167,27 @@ export function DocumentEditor() {
     const handleAIScan = async () => {
         if (!selectedDoc) return;
         setLoading(true);
-        // Simulate AI processing delay
-        await new Promise(r => setTimeout(r, 2000));
-        const aiData = {
-            curso: 'Taller',
-            grado: '3ro',
-            anio: '2026',
-            carga_horaria: '4hs semanales',
-            tematica: 'Instalaciones Eléctricas Básicas',
-            num_clase: '1',
-            recursos: 'Cables, Pelacables, Destornilladores, Tablero de pruebas'
-        };
+
         try {
-            const { data, error } = await supabase.from('documents').update(aiData).eq('id', selectedDoc.id).select().single();
+            // Utilizamos el servicio AI para simular el análisis del texto
+            const aiDataResponse = await import('../ai/aiService').then(m => m.analyzeDocumentContent(selectedDoc.content || ''));
+            const metadata = aiDataResponse.metadata;
+            const requirements = aiDataResponse.requirements;
+
+            const aiDataToSave = {
+                curso: metadata.subject,
+                grado: metadata.course,
+                anio: metadata.year,
+                carga_horaria: metadata.hourlyLoad,
+                tematica: metadata.category,
+                num_clase: metadata.classNumber,
+                recursos: [...requirements.tools, ...requirements.materials].join(', ')
+            };
+
+            const { data, error } = await supabase.from('documents').update(aiDataToSave).eq('id', selectedDoc.id).select().single();
             if (error) throw error;
             setSelectedDoc(data);
-            alert('¡Escaneo IA completado!');
+            alert('¡Escaneo IA completado y Categoría (Temática) Detectada!');
         } catch (err) {
             console.error('AI Error:', err);
         } finally {
@@ -205,25 +216,99 @@ export function DocumentEditor() {
         }
     };
 
+    const handleCreateCategory = async () => {
+        if (!newCatName.trim()) return;
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('thematic_categories').insert({ name: newCatName.trim() });
+            if (error) throw error;
+            setNewCatName('');
+            setShowNewCatInput(false);
+            fetchCategories();
+        } catch (err: any) {
+            alert('Error al crear categoría: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const canCreateDocument = user?.role === 'admin' || user?.role === 'titular';
     const canEditSelected = selectedDoc ? (user?.role === 'admin' || (user?.role === 'titular' && selectedDoc.author_id === user?.id)) : false;
+
+    const filteredDocs = selectedCategory
+        ? documents.filter(d => d.tematica === selectedCategory || (!d.tematica && selectedCategory === 'Sin Categorizar'))
+        : documents;
 
     return (
         <div className={styles.centerContainer}>
             <div className={styles.docListSidebar}>
-                <h3>Planificaciones Activas</h3>
-                <ul>
-                    {documents.map(d => (
-                        <li key={d.id}
-                            className={selectedDoc?.id === d.id ? styles.activeDoc : ''}
-                            onClick={() => setSelectedDoc(d)}
+                <div style={{ padding: '0 16px', marginBottom: '16px' }}>
+                    <h3 style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        Carpetas
+                        {canCreateDocument && (
+                            <button className={styles.iconBtn} onClick={() => setShowNewCatInput(!showNewCatInput)} title="Nueva Carpeta">
+                                <Plus size={16} />
+                            </button>
+                        )}
+                    </h3>
+                    {showNewCatInput && (
+                        <div style={{ display: 'flex', gap: '4px', marginBottom: '12px' }}>
+                            <input
+                                autoFocus
+                                style={{ flex: 1, padding: '4px 8px', fontSize: '0.85rem' }}
+                                placeholder="Nombre de temática..."
+                                value={newCatName}
+                                onChange={e => setNewCatName(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleCreateCategory()}
+                            />
+                            <button className={styles.btnPrimary} style={{ padding: '4px 8px' }} onClick={handleCreateCategory} disabled={loading}>OK</button>
+                        </div>
+                    )}
+                    <ul className={styles.folderList}>
+                        <li
+                            className={selectedCategory === null ? styles.activeFolder : ''}
+                            onClick={() => setSelectedCategory(null)}
                         >
-                            <span className={styles.docTitle}>{d.title}</span>
-                            <span className={styles.docMeta}>{d.file_type.toUpperCase()}</span>
+                            {selectedCategory === null ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
+                            <span>Todas las Planificaciones</span>
                         </li>
-                    ))}
-                    {documents.length === 0 && <li className={styles.emptyLi}>No hay documentos.</li>}
-                </ul>
+                        {categories.map(cat => (
+                            <li
+                                key={cat.id}
+                                className={selectedCategory === cat.name ? styles.activeFolder : ''}
+                                onClick={() => setSelectedCategory(cat.name)}
+                            >
+                                {selectedCategory === cat.name ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
+                                <span>{cat.name}</span>
+                            </li>
+                        ))}
+                        <li
+                            className={selectedCategory === 'Sin Categorizar' ? styles.activeFolder : ''}
+                            onClick={() => setSelectedCategory('Sin Categorizar')}
+                        >
+                            {selectedCategory === 'Sin Categorizar' ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
+                            <span style={{ fontStyle: 'italic', color: '#64748b' }}>Sin Categorizar</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                    <h4 style={{ padding: '0 16px', fontSize: '0.85rem', color: '#64748b', marginBottom: '8px' }}>
+                        Documentos en {selectedCategory || "Todas"}
+                    </h4>
+                    <ul>
+                        {filteredDocs.map(d => (
+                            <li key={d.id}
+                                className={selectedDoc?.id === d.id ? styles.activeDoc : ''}
+                                onClick={() => setSelectedDoc(d)}
+                            >
+                                <span className={styles.docTitle}>{d.title}</span>
+                                <span className={styles.docMeta}>{d.file_type.toUpperCase()}</span>
+                            </li>
+                        ))}
+                        {filteredDocs.length === 0 && <li className={styles.emptyLi}>No hay documentos en esta carpeta.</li>}
+                    </ul>
+                </div>
 
                 {canCreateDocument && (
                     <div className={styles.uploadSection}>

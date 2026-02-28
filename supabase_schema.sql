@@ -90,10 +90,19 @@ CREATE TABLE IF NOT EXISTS public.documents (
   grado text,
   anio text,
   carga_horaria text,
-  tematica text,
+  tematica text, -- Kategorías: manualidades, proyecto institucional, programacion y robotica, ciudadania digital, cuidado digital, alfabetizacion
   num_clase text,
   recursos text
 );
+
+-- Ensure columns exist if table was already created
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS curso text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS grado text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS anio text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS carga_horaria text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS tematica text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS num_clase text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS recursos text;
 
 alter table public.documents enable row level security;
 
@@ -181,3 +190,52 @@ create policy "Versions viewable by all authenticated users"
 
 create policy "Titulares and Admins can insert versions"
   on document_versions for insert to authenticated with check ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) IN ('admin', 'titular') );
+
+-- 6. Create Navigation Tabs Table (Dynamic Sidebar Menu)
+CREATE TABLE IF NOT EXISTS public.navigation_tabs (
+  id uuid default gen_random_uuid() primary key,
+  label text not null,
+  path text not null default '/editor',
+  order_index integer not null default 0,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.navigation_tabs enable row level security;
+
+DROP POLICY IF EXISTS "Navigation tabs viewable by all authenticated users" ON public.navigation_tabs;
+DROP POLICY IF EXISTS "Admins can manage navigation tabs" ON public.navigation_tabs;
+
+create policy "Navigation tabs viewable by all authenticated users"
+  on navigation_tabs for select to authenticated using ( true );
+
+create policy "Admins can manage navigation tabs"
+  on navigation_tabs for all to authenticated using ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );
+
+-- 7. Create Thematic Categories Table (Dynamic Mini-Folders)
+CREATE TABLE IF NOT EXISTS public.thematic_categories (
+  id uuid default gen_random_uuid() primary key,
+  name text not null unique,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Insert default categories if table is empty
+INSERT INTO public.thematic_categories (name)
+VALUES
+  ('Manualidades'),
+  ('Proyecto Institucional'),
+  ('Programación y Robótica'),
+  ('Ciudadanía Digital'),
+  ('Cuidado Digital'),
+  ('Alfabetización')
+ON CONFLICT (name) DO NOTHING;
+
+alter table public.thematic_categories enable row level security;
+
+DROP POLICY IF EXISTS "Categories viewable by all authenticated users" ON public.thematic_categories;
+DROP POLICY IF EXISTS "Admins and Titulares can manage categories" ON public.thematic_categories;
+
+create policy "Categories viewable by all authenticated users"
+  on thematic_categories for select to authenticated using ( true );
+
+create policy "Admins and Titulares can manage categories"
+  on thematic_categories for all to authenticated using ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) IN ('admin', 'titular') );

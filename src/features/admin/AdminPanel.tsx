@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { useAuthStore } from '../../store/useAuthStore';
 import styles from './AdminPanel.module.css';
-import { Shield, KeyRound, UserPlus, Trash2, Users } from 'lucide-react';
+import { Shield, KeyRound, UserPlus, Trash2, Users, List, PlusCircle, Trash, Folder } from 'lucide-react';
 
 export function AdminPanel() {
     const { profile: currentUser } = useAuthStore();
@@ -11,7 +11,13 @@ export function AdminPanel() {
     const [deletedDocs, setDeletedDocs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'users' | 'trash'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'trash' | 'navigation' | 'categories'>('users');
+    const [navTabs, setNavTabs] = useState<any[]>([]);
+    const [newTabLabel, setNewTabLabel] = useState('');
+    const [newTabPath, setNewTabPath] = useState('/editor');
+
+    const [categories, setCategories] = useState<any[]>([]);
+    const [newCategoryName, setNewCategoryName] = useState('');
 
     // Form State
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -34,10 +40,18 @@ export function AdminPanel() {
                 const { data, error } = await supabase.from('users').select('*').order('name');
                 if (error) throw error;
                 setUsers(data || []);
-            } else {
+            } else if (activeTab === 'trash') {
                 const { data, error } = await supabase.from('documents').select('*').eq('status', 'deleted').order('created_at', { ascending: false });
                 if (error) throw error;
                 setDeletedDocs(data || []);
+            } else if (activeTab === 'navigation') {
+                const { data, error } = await supabase.from('navigation_tabs').select('*').order('order_index', { ascending: true });
+                if (error) throw error;
+                setNavTabs(data || []);
+            } else if (activeTab === 'categories') {
+                const { data, error } = await supabase.from('thematic_categories').select('*').order('name', { ascending: true });
+                if (error) throw error;
+                setCategories(data || []);
             }
         } catch (err: any) {
             setError('Error al cargar datos: ' + err.message);
@@ -107,6 +121,62 @@ export function AdminPanel() {
         }
     };
 
+    const handleCreateNavTab = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        if (!newTabLabel.trim() || !newTabPath.trim()) return;
+
+        try {
+            const nextOrder = navTabs.length > 0 ? Math.max(...navTabs.map(t => t.order_index)) + 1 : 0;
+            const { error } = await supabase.from('navigation_tabs').insert({
+                label: newTabLabel,
+                path: newTabPath,
+                order_index: nextOrder
+            });
+            if (error) throw error;
+            setNewTabLabel('');
+            setNewTabPath('/editor');
+            fetchData();
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
+    const handleDeleteNavTab = async (id: string) => {
+        try {
+            const { error } = await supabase.from('navigation_tabs').delete().eq('id', id);
+            if (error) throw error;
+            fetchData();
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
+    const handleCreateCategory = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        if (!newCategoryName.trim()) return;
+
+        try {
+            const { error } = await supabase.from('thematic_categories').insert({ name: newCategoryName.trim() });
+            if (error) throw error;
+            setNewCategoryName('');
+            fetchData();
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
+    const handleDeleteCategory = async (id: string) => {
+        try {
+            const { error } = await supabase.from('thematic_categories').delete().eq('id', id);
+            if (error) throw error;
+            fetchData();
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
     if (currentUser?.role !== 'admin') {
         return (
             <div className={styles.unauthorized}>
@@ -130,6 +200,18 @@ export function AdminPanel() {
                         onClick={() => setActiveTab('users')}
                     >
                         <Users size={18} /> Personal
+                    </button>
+                    <button
+                        className={activeTab === 'navigation' ? styles.btnPrimary : styles.btnSecondary}
+                        onClick={() => setActiveTab('navigation')}
+                    >
+                        <List size={18} /> Menú Nav
+                    </button>
+                    <button
+                        className={activeTab === 'categories' ? styles.btnPrimary : styles.btnSecondary}
+                        onClick={() => setActiveTab('categories')}
+                    >
+                        <Folder size={18} /> Categorías
                     </button>
                     <button
                         className={activeTab === 'trash' ? styles.btnPrimary : styles.btnSecondary}
@@ -262,6 +344,84 @@ export function AdminPanel() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {activeTab === 'navigation' && (
+                <div style={{ display: 'flex', gap: '24px', padding: '20px' }}>
+                    <div style={{ flex: 1 }}>
+                        <form className={styles.formCard} onSubmit={handleCreateNavTab}>
+                            <h3>Crear Nueva Pestaña (Link)</h3>
+                            <div className={styles.formRow}>
+                                <input required placeholder="Etiqueta ej. Taller de Herrería" value={newTabLabel} onChange={e => setNewTabLabel(e.target.value)} />
+                                <input required placeholder="Ruta ej. /editor" value={newTabPath} onChange={e => setNewTabPath(e.target.value)} />
+                            </div>
+                            <div className={styles.formActions}>
+                                <button type="submit" className={styles.btnPrimary}><PlusCircle size={16} style={{ marginRight: 6 }} />Añadir Pestaña</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                        <div className={styles.formCard}>
+                            <h3>Pestañas Actuales</h3>
+                            {loading ? <p>Cargando...</p> : (
+                                <ul style={{ listStyle: 'none', padding: 0 }}>
+                                    {navTabs.map(tab => (
+                                        <li key={tab.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderBottom: '1px solid #e2e8f0', alignItems: 'center' }}>
+                                            <div>
+                                                <strong>{tab.label}</strong> <span style={{ color: '#64748b', fontSize: '0.8rem' }}>({tab.path})</span>
+                                            </div>
+                                            <button className={styles.btnDanger} style={{ padding: '6px' }} onClick={() => handleDeleteNavTab(tab.id)}>
+                                                <Trash size={14} />
+                                            </button>
+                                        </li>
+                                    ))}
+                                    {navTabs.length === 0 && <p style={{ color: '#64748b' }}>No hay pestañas configuradas.</p>}
+                                </ul>
+                            )}
+                            <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '12px' }}>
+                                Los cambios se verán reflejados al recargar la página principal para los usuarios.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'categories' && (
+                <div style={{ display: 'flex', gap: '24px', padding: '20px' }}>
+                    <div style={{ flex: 1 }}>
+                        <form className={styles.formCard} onSubmit={handleCreateCategory}>
+                            <h3>Crear Categoría Temática</h3>
+                            <div className={styles.formRow}>
+                                <input required placeholder="Ej. Ciencias Naturales" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
+                            </div>
+                            <div className={styles.formActions}>
+                                <button type="submit" className={styles.btnPrimary}><PlusCircle size={16} style={{ marginRight: 6 }} />Añadir Categoría</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                        <div className={styles.formCard}>
+                            <h3>Carpetas Actuales</h3>
+                            {loading ? <p>Cargando...</p> : (
+                                <ul style={{ listStyle: 'none', padding: 0 }}>
+                                    {categories.map(cat => (
+                                        <li key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderBottom: '1px solid #e2e8f0', alignItems: 'center' }}>
+                                            <div>
+                                                <strong>{cat.name}</strong>
+                                            </div>
+                                            <button className={styles.btnDanger} style={{ padding: '6px' }} onClick={() => handleDeleteCategory(cat.id)}>
+                                                <Trash size={14} />
+                                            </button>
+                                        </li>
+                                    ))}
+                                    {categories.length === 0 && <p style={{ color: '#64748b' }}>No hay categorías temáticas configuradas.</p>}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
