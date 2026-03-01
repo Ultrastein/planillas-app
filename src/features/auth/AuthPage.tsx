@@ -23,11 +23,7 @@ export function AuthPage() {
         resolver: zodResolver(loginSchema),
     });
 
-    const enterFullscreen = () => {
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch((e) => console.log('Fullscreen error:', e));
-        }
-    };
+
 
     const onSubmit = async (data: LoginForm) => {
         setLoading(true);
@@ -41,7 +37,6 @@ export function AuthPage() {
 
             if (signInError) throw signInError;
 
-            enterFullscreen();
             navigate('/');
         } catch (err: any) {
             if (err.message?.includes('Invalid login credentials')) {
@@ -65,7 +60,6 @@ export function AuthPage() {
 
             if (authError) throw authError;
 
-            enterFullscreen();
             navigate('/');
         } catch (error: any) {
             console.error(error);
