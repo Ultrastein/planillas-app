@@ -7,7 +7,7 @@ import { useCategoryStore } from '../../store/useCategoryStore';
 import { RichTextEditor } from './RichTextEditor';
 import styles from './DocumentEditor.module.css';
 import * as mammoth from 'mammoth';
-import { Folder, FolderOpen, Plus } from 'lucide-react';
+import { Folder, FolderOpen, Plus, FileText } from 'lucide-react';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
@@ -93,7 +93,7 @@ export function DocumentEditor() {
                 .from('documents')
                 .select('title, content')
                 .eq('status', 'active');
-            
+
             if (fetchDocsError) throw fetchDocsError;
 
             // Check if title already exists
@@ -106,10 +106,10 @@ export function DocumentEditor() {
             // Check if content already exists (only for text-based uploads where content is extracted or typed)
             if (content && content.trim() !== '') {
                 const isDuplicateContent = existingDocs?.some(doc => {
-                     // Solo comparar si el documento existente tiene contenido
-                     if (!doc.content) return false;
-                     // Comparar de forma básica (se podría mejorar ignorando espacios o saltos de línea)
-                     return doc.content.trim() === content?.trim();
+                    // Solo comparar si el documento existente tiene contenido
+                    if (!doc.content) return false;
+                    // Comparar de forma básica (se podría mejorar ignorando espacios o saltos de línea)
+                    return doc.content.trim() === content?.trim();
                 });
 
                 if (isDuplicateContent) {
@@ -273,169 +273,177 @@ export function DocumentEditor() {
 
     return (
         <div className={styles.centerContainer}>
-            <div className={styles.docListSidebar}>
-                <div style={{ padding: '0 16px', marginBottom: '16px' }}>
-                    <h3 style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        Carpetas
-                        {canCreateDocument && (
-                            <button className={styles.iconBtn} onClick={() => setShowNewCatInput(!showNewCatInput)} title="Nueva Carpeta">
-                                <Plus size={16} />
-                            </button>
-                        )}
-                    </h3>
-                    {showNewCatInput && (
-                        <div style={{ display: 'flex', gap: '4px', marginBottom: '12px' }}>
-                            <input
-                                autoFocus
-                                style={{ flex: 1, padding: '4px 8px', fontSize: '0.85rem' }}
-                                placeholder="Nombre de temática..."
-                                value={newCatName}
-                                onChange={e => setNewCatName(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleCreateCategory()}
-                            />
-                            <button className={styles.btnPrimary} style={{ padding: '4px 8px' }} onClick={handleCreateCategory} disabled={loading}>OK</button>
-                        </div>
-                    )}
-                    <ul className={styles.folderList}>
-                        <li
-                            className={selectedCategory === null ? styles.activeFolder : ''}
-                            onClick={() => setSelectedCategory(null)}
-                        >
-                            {selectedCategory === null ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
-                            <span>Todas las Planificaciones</span>
-                        </li>
-                        {categories.map(cat => (
-                            <li
-                                key={cat.id}
-                                className={selectedCategory === cat.name ? styles.activeFolder : ''}
-                                onClick={() => setSelectedCategory(cat.name)}
-                            >
-                                {selectedCategory === cat.name ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
-                                <span>{cat.name}</span>
-                            </li>
-                        ))}
-                        <li
-                            className={selectedCategory === 'Sin Categorizar' ? styles.activeFolder : ''}
-                            onClick={() => setSelectedCategory('Sin Categorizar')}
-                        >
-                            {selectedCategory === 'Sin Categorizar' ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
-                            <span style={{ fontStyle: 'italic', color: '#64748b' }}>Sin Categorizar</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                    <h4 style={{ padding: '0 16px', fontSize: '0.85rem', color: '#64748b', marginBottom: '8px' }}>
-                        Documentos en {selectedCategory || "Todas"}
-                    </h4>
-                    <ul>
-                        {filteredDocs.map(d => (
-                            <li key={d.id}
-                                className={selectedDoc?.id === d.id ? styles.activeDoc : ''}
-                                onClick={() => setSelectedDoc(d)}
-                            >
-                                <span className={styles.docTitle}>{d.title}</span>
-                                <span className={styles.docMeta}>{d.file_type.toUpperCase()}</span>
-                            </li>
-                        ))}
-                        {filteredDocs.length === 0 && <li className={styles.emptyLi}>No hay documentos en esta carpeta.</li>}
-                    </ul>
-                </div>
-
-                {canCreateDocument && (
-                    <div className={styles.uploadSection}>
-                        <h4>Subir Nuevo Documento</h4>
-                        <input
-                            type="text"
-                            placeholder="Título"
-                            value={uploadTitle}
-                            onChange={e => setUploadTitle(e.target.value)}
-                        />
-                        <select value={uploadType} onChange={(e: any) => setUploadType(e.target.value)}>
-                            <option value="editor">Editor de Texto</option>
-                            <option value="word">Word (.docx)</option>
-                            <option value="pdf">Documento PDF</option>
-                            <option value="gdoc">Google Docs Link</option>
-                        </select>
-
-                        {(uploadType === 'word' || uploadType === 'pdf') && (
-                            <input type="file" accept={uploadType === 'word' ? ".docx" : ".pdf"} onChange={handleFileUploadChange} />
-                        )}
-
-                        {uploadType === 'gdoc' && (
-                            <input type="url" placeholder="URL de Google Docs" value={gdocUrl} onChange={e => setGdocUrl(e.target.value)} />
-                        )}
-
-                        <button className={styles.btnPrimary} onClick={handleSaveDocument} disabled={loading}>
-                            {loading ? 'Guardando...' : 'Guardar y Publicar'}
+            {/* GOOGLE DRIVE STYLE HEADER: Horizontally scrollable folders row */}
+            <div className={styles.topFolderRow}>
+                <div className={styles.folderRowHeader}>
+                    <h3>Carpetas de Planificación</h3>
+                    {canCreateDocument && (
+                        <button className={styles.iconBtn} onClick={() => setShowNewCatInput(!showNewCatInput)} title="Nueva Carpeta">
+                            <Plus size={16} />
                         </button>
+                    )}
+                </div>
+
+                {showNewCatInput && (
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '12px', maxWidth: '300px' }}>
+                        <input
+                            autoFocus
+                            style={{ flex: 1, padding: '6px 10px', fontSize: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                            placeholder="Nombre de temática..."
+                            value={newCatName}
+                            onChange={e => setNewCatName(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleCreateCategory()}
+                        />
+                        <button className={styles.btnPrimary} style={{ padding: '6px 12px' }} onClick={handleCreateCategory} disabled={loading}>OK</button>
                     </div>
                 )}
+
+                <div className={styles.foldersContainer}>
+                    <div
+                        className={`${styles.folderChip} ${selectedCategory === null ? styles.activeFolderChip : ''}`}
+                        onClick={() => setSelectedCategory(null)}
+                    >
+                        {selectedCategory === null ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
+                        <span>Todas</span>
+                    </div>
+                    {categories.map(cat => (
+                        <div
+                            key={cat.id}
+                            className={`${styles.folderChip} ${selectedCategory === cat.name ? styles.activeFolderChip : ''}`}
+                            onClick={() => setSelectedCategory(cat.name)}
+                        >
+                            {selectedCategory === cat.name ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
+                            <span>{cat.name}</span>
+                        </div>
+                    ))}
+                    <div
+                        className={`${styles.folderChip} ${selectedCategory === 'Sin Categorizar' ? styles.activeFolderChip : ''}`}
+                        onClick={() => setSelectedCategory('Sin Categorizar')}
+                    >
+                        {selectedCategory === 'Sin Categorizar' ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
+                        <span style={{ fontStyle: 'italic', color: '#64748b' }}>Sin Categorizar</span>
+                    </div>
+                </div>
             </div>
 
-            <div className={styles.viewerArea}>
-                {selectedDoc ? (
-                    <>
-                        <div className={styles.docRibbon}>
-                            <div>
-                                <h2>{selectedDoc.title}</h2>
-                                <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
-                                {selectedDoc.curso && (
-                                    <div className={styles.aiMetadata}>
-                                        <span className={styles.badge}>Curso: {selectedDoc.curso}</span>
-                                        <span className={styles.badge}>Grado: {selectedDoc.grado} {selectedDoc.anio}</span>
-                                        <span className={styles.badge}>Clase N°: {selectedDoc.num_clase}</span>
-                                        <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Temática:</strong> {selectedDoc.tematica} | <strong>Carga:</strong> {selectedDoc.carga_horaria}</p>
-                                        <p style={{ fontSize: '0.85rem' }}><strong>Materiales Sugeridos:</strong> {selectedDoc.recursos}</p>
+            <div className={styles.lowerWorkspace}>
+                <div className={styles.docListSidebar}>
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <h4 style={{ padding: '0 12px', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: 600 }}>
+                            Documentos en {selectedCategory || "Todas"}
+                        </h4>
+                        <ul className={styles.docList}>
+                            {filteredDocs.map(d => (
+                                <li key={d.id}
+                                    className={selectedDoc?.id === d.id ? styles.activeDoc : ''}
+                                    onClick={() => setSelectedDoc(d)}
+                                >
+                                    <span className={styles.docTitle}>{d.title}</span>
+                                    <span className={styles.docMeta}>{d.file_type.toUpperCase()}</span>
+                                </li>
+                            ))}
+                            {filteredDocs.length === 0 && <li className={styles.emptyLi}>No hay documentos aquí.</li>}
+                        </ul>
+                    </div>
+
+                    {canCreateDocument && (
+                        <div className={styles.uploadSection}>
+                            <h4 style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: 600 }}>Selección de Material</h4>
+                            <input
+                                type="text"
+                                placeholder="Título del nuevo material"
+                                value={uploadTitle}
+                                onChange={e => setUploadTitle(e.target.value)}
+                            />
+                            <select value={uploadType} onChange={(e: any) => setUploadType(e.target.value)}>
+                                <option value="editor">Editor de Texto En App</option>
+                                <option value="word">Word (.docx)</option>
+                                <option value="pdf">Documento PDF</option>
+                                <option value="gdoc">Google Docs Link</option>
+                            </select>
+
+                            {(uploadType === 'word' || uploadType === 'pdf') && (
+                                <input type="file" accept={uploadType === 'word' ? ".docx" : ".pdf"} onChange={handleFileUploadChange} />
+                            )}
+
+                            {uploadType === 'gdoc' && (
+                                <input type="url" placeholder="URL de Google Docs" value={gdocUrl} onChange={e => setGdocUrl(e.target.value)} />
+                            )}
+
+                            <button className={styles.btnPrimary} onClick={handleSaveDocument} disabled={loading} style={{ marginTop: 8 }}>
+                                {loading ? 'Subiendo...' : 'Publicar Material'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className={styles.viewerArea}>
+                    {selectedDoc ? (
+                        <>
+                            <div className={styles.docRibbon}>
+                                <div>
+                                    <h2>{selectedDoc.title}</h2>
+                                    <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
+                                    {selectedDoc.curso && (
+                                        <div className={styles.aiMetadata}>
+                                            <span className={styles.badge}>Curso: {selectedDoc.curso}</span>
+                                            <span className={styles.badge}>Grado: {selectedDoc.grado} {selectedDoc.anio}</span>
+                                            <span className={styles.badge}>Clase N°: {selectedDoc.num_clase}</span>
+                                            <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Temática:</strong> {selectedDoc.tematica} | <strong>Carga:</strong> {selectedDoc.carga_horaria}</p>
+                                            <p style={{ fontSize: '0.85rem' }}><strong>Materiales Sugeridos:</strong> {selectedDoc.recursos}</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={styles.ribbonActions}>
+                                    {canEditSelected && (
+                                        <>
+                                            {selectedDoc.file_type === 'editor' && (
+                                                <button className={styles.btnPrimary} onClick={handleCreateVersion} disabled={loading}>
+                                                    Guardar Versión
+                                                </button>
+                                            )}
+                                            <button className={styles.btnSecondary} onClick={handleAIScan} disabled={loading}>
+                                                {loading ? 'Analizando...' : 'Analizar con IA'}
+                                            </button>
+                                            <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className={styles.previewContainer}>
+                                {selectedDoc.file_type === 'pdf' && selectedDoc.file_url && (
+                                    <iframe src={selectedDoc.file_url} width="100%" height="100%" title="PDF Prev" />
+                                )}
+                                {selectedDoc.file_type === 'word' && (
+                                    <div className={styles.wordPreview}>
+                                        {selectedDoc.file_url && <div style={{ marginBottom: 10 }}><a href={selectedDoc.file_url} target="_blank" rel="noreferrer">Descargar Original (.docx)</a></div>}
+                                        {selectedDoc.content || 'Vista previa no disponible.'}
+                                    </div>
+                                )}
+                                {selectedDoc.file_type === 'gdoc' && selectedDoc.file_url && (
+                                    <iframe src={selectedDoc.file_url} width="100%" height="100%" title="GDoc Prev" />
+                                )}
+                                {selectedDoc.file_type === 'editor' && (
+                                    <div className={styles.editorWrapper}>
+                                        <RichTextEditor
+                                            content={previewVersion ? (previewVersion.content || '') : (selectedDoc.content || '')}
+                                            onSave={(newContent) => handleAutoSave(selectedDoc.id, newContent)}
+                                            readOnly={!canEditSelected || !!previewVersion}
+                                        />
                                     </div>
                                 )}
                             </div>
-                            <div className={styles.ribbonActions}>
-                                {canEditSelected && (
-                                    <>
-                                        {selectedDoc.file_type === 'editor' && (
-                                            <button className={styles.btnPrimary} onClick={handleCreateVersion} disabled={loading}>
-                                                Guardar Versión
-                                            </button>
-                                        )}
-                                        <button className={styles.btnSecondary} onClick={handleAIScan} disabled={loading}>
-                                            {loading ? 'Analizando...' : 'Analizar con IA'}
-                                        </button>
-                                        <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
-                                    </>
-                                )}
+                        </>
+                    ) : (
+                        <div className={styles.noDocSelected}>
+                            <div style={{ textAlign: 'center' }}>
+                                <FileText size={48} color="var(--border-color)" style={{ marginBottom: 16 }} />
+                                <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Seleccione un documento o cargue uno nuevo</p>
                             </div>
                         </div>
-
-                        <div className={styles.previewContainer}>
-                            {selectedDoc.file_type === 'pdf' && selectedDoc.file_url && (
-                                <iframe src={selectedDoc.file_url} width="100%" height="100%" title="PDF Prev" />
-                            )}
-                            {selectedDoc.file_type === 'word' && (
-                                <div className={styles.wordPreview}>
-                                    {selectedDoc.file_url && <div style={{ marginBottom: 10 }}><a href={selectedDoc.file_url} target="_blank" rel="noreferrer">Descargar Original (.docx)</a></div>}
-                                    {selectedDoc.content || 'Vista previa no disponible.'}
-                                </div>
-                            )}
-                            {selectedDoc.file_type === 'gdoc' && selectedDoc.file_url && (
-                                <iframe src={selectedDoc.file_url} width="100%" height="100%" title="GDoc Prev" />
-                            )}
-                            {selectedDoc.file_type === 'editor' && (
-                                <div className={styles.editorWrapper}>
-                                    <RichTextEditor
-                                        content={previewVersion ? (previewVersion.content || '') : (selectedDoc.content || '')}
-                                        onSave={(newContent) => handleAutoSave(selectedDoc.id, newContent)}
-                                        readOnly={!canEditSelected || !!previewVersion}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    </>
-                ) : (
-                    <div className={styles.noDocSelected}>
-                        <p>Seleccione un documento del menú izquierdo o cargue uno nuevo.</p>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );

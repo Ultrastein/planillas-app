@@ -25,9 +25,9 @@
   --success-color: #0A4E35;
   /* TecnoKids Bottle Green */
 
-  --sidebar-width: 260px;
+  --sidebar-width: 220px;
   /* Slightly slimmer for pro look */
-  --right-panel-width: 320px;
+  --right-panel-width: 300px;
 
   /* Modern Professional Font (keeping Outfit for brand consistency but can use weights) */
   --font-family: 'Outfit', 'Inter', system-ui, sans-serif;
@@ -48,6 +48,11 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+html {
+  font-size: 14px;
+  /* Fix zoom by reducing base scale */
 }
 
 body {

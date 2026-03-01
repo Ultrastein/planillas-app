@@ -46,21 +46,6 @@ export function DesktopLayout() {
                         </ul>
                     </div>
                 </nav>
-
-                <div className={styles.userProfile}>
-                    <div className={styles.userInfo}>
-                        <span className={styles.userName}>{profile?.name || user.email}</span>
-                        <span className={styles.userRole}>{profile?.role || 'Docente'}</span>
-                    </div>
-                    {profile?.role === 'admin' && (
-                        <button className={styles.iconBtn} title="Panel Master Control" onClick={() => navigate('/admin')}>
-                            <Settings size={18} />
-                        </button>
-                    )}
-                    <button className={styles.iconBtn} onClick={logout} title="Cerrar Sesión">
-                        <LogOut size={18} />
-                    </button>
-                </div>
             </aside>
 
             {/* CENTRAL AREA */}
@@ -70,7 +55,20 @@ export function DesktopLayout() {
                         <h2>{window.location.pathname.includes('admin') ? 'Master Control' : 'Edición de Planificación'}</h2>
                     </div>
                     <div className={styles.actions}>
-                        {/* Real-time users indicator could go here */}
+                        <div className={styles.headerProfile}>
+                            <div className={styles.userInfoHeader}>
+                                <span className={styles.userNameHeader}>{profile?.name || user.email}</span>
+                                <span className={styles.userRoleHeader}>{profile?.role || 'Docente'}</span>
+                            </div>
+                            {profile?.role === 'admin' && (
+                                <button className={styles.iconBtnHeader} title="Panel Master Control" onClick={() => navigate('/admin')}>
+                                    <Settings size={18} />
+                                </button>
+                            )}
+                            <button className={styles.iconBtnHeader} onClick={logout} title="Cerrar Sesión">
+                                <LogOut size={18} />
+                            </button>
+                        </div>
                     </div>
                 </header>
 

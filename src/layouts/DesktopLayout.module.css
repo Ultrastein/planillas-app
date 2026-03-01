@@ -167,7 +167,54 @@
 
 .actions {
     display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.headerProfile {
+    display: flex;
+    align-items: center;
     gap: 12px;
+    padding: 6px 16px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    /* Pill shape for header */
+}
+
+.userInfoHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    /* Align text to right in header */
+}
+
+.userNameHeader {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.userRoleHeader {
+    font-size: 0.70rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.iconBtnHeader {
+    color: var(--text-secondary);
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background-color: transparent;
+}
+
+.iconBtnHeader:hover {
+    background-color: var(--border-color);
+    color: var(--primary-color);
 }
 
 .btnPrimary {
