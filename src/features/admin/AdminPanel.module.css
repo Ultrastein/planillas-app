@@ -91,20 +91,22 @@
 
 .formCard {
     background-color: white;
-    border: 1px solid var(--border-color);
+    border: 2px solid var(--border-color);
+    /* Thicker soft border */
     border-radius: var(--radius-lg);
     padding: 24px;
     margin-bottom: 24px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-sm);
+    /* Softer shadow */
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
 .formCard h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-primary);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--primary-color);
     margin-bottom: 8px;
 }
 
@@ -120,17 +122,19 @@
 
 .formRow input,
 .formRow select {
-    padding: 10px 12px;
-    border: 1px solid var(--border-color);
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
     border-radius: var(--radius-md);
+    /* Bubbly inputs */
     font-size: 0.95rem;
     outline: none;
-    transition: border-color 0.2s;
+    transition: all 0.2s ease;
 }
 
 .formRow input:focus,
 .formRow select:focus {
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(57, 176, 196, 0.1);
 }
 
 .formActions {

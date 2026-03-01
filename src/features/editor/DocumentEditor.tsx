@@ -87,6 +87,38 @@ export function DocumentEditor() {
                 content = "Contenido de editor en blanco..."; // Demo placeholder
             }
 
+            // --- Duplicate Check Start ---
+            // Fetch all active documents for duplicate comparison
+            const { data: existingDocs, error: fetchDocsError } = await supabase
+                .from('documents')
+                .select('title, content')
+                .eq('status', 'active');
+            
+            if (fetchDocsError) throw fetchDocsError;
+
+            // Check if title already exists
+            const isDuplicateTitle = existingDocs?.some(doc => doc.title.trim().toLowerCase() === uploadTitle.trim().toLowerCase());
+            if (isDuplicateTitle) {
+                setLoading(false);
+                return alert('Ya existe un documento con este título. Por favor, elige un título diferente.');
+            }
+
+            // Check if content already exists (only for text-based uploads where content is extracted or typed)
+            if (content && content.trim() !== '') {
+                const isDuplicateContent = existingDocs?.some(doc => {
+                     // Solo comparar si el documento existente tiene contenido
+                     if (!doc.content) return false;
+                     // Comparar de forma básica (se podría mejorar ignorando espacios o saltos de línea)
+                     return doc.content.trim() === content?.trim();
+                });
+
+                if (isDuplicateContent) {
+                    setLoading(false);
+                    return alert('Ya existe un documento con este mismo contenido. No se ha guardado el duplicado.');
+                }
+            }
+            // --- Duplicate Check End ---
+
             // Upload physical file if it's PDF or Word
             if (uploadFile && (uploadType === 'pdf' || uploadType === 'word')) {
                 const fileExt = uploadFile.name.split('.').pop();

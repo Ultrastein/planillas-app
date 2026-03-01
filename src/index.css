@@ -1,20 +1,32 @@
 :root {
-  --bg-primary: #f8fafc;
+  /* TecnoKids Colors */
+  --bg-primary: #f0fdfa; /* Light cyan tint */
   --bg-secondary: #ffffff;
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --border-color: #e2e8f0;
-  --primary-color: #2563eb;
-  --primary-hover: #1d4ed8;
-  --danger-color: #ef4444;
-  --success-color: #22c55e;
+  --border-color: #ccfbf1;
+  --primary-color: #39B0C4; /* TecnoKids Cyan */
+  --primary-hover: #2d8f9f;
+  --danger-color: #ef4444; /* Bittersweet hint */
+  --success-color: #0A4E35; /* TecnoKids Bottle Green */
+  
   --sidebar-width: 280px;
   --right-panel-width: 340px;
-  --font-family: 'Inter', Roboto, system-ui, sans-serif;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  
+  /* Modern Youthful Font */
+  --font-family: 'Outfit', 'Nunito', system-ui, sans-serif;
+  
+  /* Bubbly/Rounded Look */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  
+  /* Soft Shadows */
+  --shadow-sm: 0 2px 4px rgba(57, 176, 196, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(57, 176, 196, 0.1), 0 2px 4px -1px rgba(57, 176, 196, 0.06);
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
 
 * {
   box-sizing: border-box;

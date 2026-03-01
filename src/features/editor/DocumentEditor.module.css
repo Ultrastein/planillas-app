@@ -7,7 +7,8 @@
 
 .docListSidebar {
     width: 250px;
-    background-color: #f8fafc;
+    background-color: var(--bg-primary);
+    /* Light cyan */
     border-right: 1px solid var(--border-color);
     padding: 20px;
     display: flex;
@@ -15,9 +16,10 @@
 }
 
 .docListSidebar h3 {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
 }
 
 .docListSidebar ul {
@@ -25,25 +27,31 @@
     flex: 1;
     overflow-y: auto;
     margin-bottom: 20px;
+    padding-right: 4px;
 }
 
 .docListSidebar li {
-    padding: 10px;
+    padding: 12px 16px;
     background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    /* Bubbly folders */
     margin-bottom: 8px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .docListSidebar li:hover {
-    border-color: var(--primary-color);
+    border-color: var(--border-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
 }
 
 .activeDoc {
     border-color: var(--primary-color) !important;
-    background-color: #eff6ff !important;
+    background-color: white !important;
+    box-shadow: var(--shadow-md) !important;
 }
 
 .docTitle {
@@ -81,30 +89,48 @@
 
 .uploadSection input,
 .uploadSection select {
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    font-size: 0.85rem;
+    padding: 10px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.uploadSection input:focus,
+.uploadSection select:focus {
+    outline: none;
+    border-color: var(--primary-color);
 }
 
 .btnPrimary {
     background-color: var(--primary-color);
     color: white;
-    padding: 10px;
-    border-radius: var(--radius-sm);
-    font-weight: 500;
-    transition: background 0.2s;
+    padding: 10px 16px;
+    border-radius: var(--radius-lg);
+    /* Pill shaped */
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(57, 176, 196, 0.2);
 }
 
 .btnPrimary:hover {
     background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .btnDanger {
     background-color: var(--danger-color);
     color: white;
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btnDanger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
 }
 
 .viewerArea {
@@ -170,10 +196,11 @@
 
 .aiMetadata {
     margin-top: 12px;
-    padding: 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: var(--radius-sm);
+    padding: 16px;
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
 }
 
 .badge {
@@ -181,10 +208,11 @@
     background: var(--primary-color);
     color: white;
     font-size: 0.75rem;
-    padding: 2px 8px;
-    border-radius: 12px;
+    padding: 4px 10px;
+    border-radius: var(--radius-lg);
     margin-right: 8px;
-    font-weight: 500;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(57, 176, 196, 0.15);
 }
 
 .editorWrapper {
@@ -196,18 +224,20 @@
 }
 
 .btnSecondary {
-    background-color: #f1f5f9;
-    color: #334155;
-    border: 1px solid #cbd5e1;
+    background-color: white;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
     padding: 8px 16px;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s;
+    font-weight: 600;
+    transition: all 0.2s ease;
 }
 
 .btnSecondary:hover {
-    background-color: #e2e8f0;
+    background-color: var(--bg-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
 }
 
 .btnSecondary:disabled {

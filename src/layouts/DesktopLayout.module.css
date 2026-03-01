@@ -6,36 +6,43 @@
 
 .sidebar {
     width: var(--sidebar-width);
-    background-color: #1e293b;
-    color: #f8fafc;
+    background-color: #ffffff;
+    /* Brighter sidebar for kids style */
+    color: var(--text-primary);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    border-right: 1px solid var(--border-color);
 }
 
 .brand {
     padding: 24px;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
 .brand h1 {
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: 1.35rem;
+    /* Slightly larger */
+    font-weight: 700;
+    /* Bolder for Outfit font */
+    color: var(--primary-color);
     margin: 0;
 }
 
 .badge {
     background: var(--primary-color);
     color: white;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: var(--radius-sm);
-    font-weight: bold;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: var(--radius-lg);
+    /* Very rounded pill shape */
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    box-shadow: var(--shadow-sm);
 }
 
 .navTree {
@@ -45,40 +52,48 @@
 }
 
 .navSection h3 {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    color: #94a3b8;
+    color: var(--text-secondary);
     margin-bottom: 12px;
     letter-spacing: 0.5px;
+    font-weight: 600;
 }
 
 .navSection ul {
     list-style: none;
     padding-left: 12px;
-    border-left: 1px solid #334155;
+    border-left: 2px solid var(--border-color);
+    /* Thicker softer border */
 }
 
 .navSection li {
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    font-weight: 500;
     cursor: pointer;
-    color: #cbd5e1;
-    border-radius: var(--radius-sm);
-    transition: background 0.2s, color 0.2s;
-    margin-bottom: 4px;
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    /* Bubbly items */
+    transition: all 0.2s ease;
+    margin-bottom: 6px;
 }
 
 .navSection li:hover {
-    background-color: #334155;
-    color: white;
+    background-color: var(--bg-primary);
+    /* Light hover */
+    color: var(--primary-color);
+    transform: translateX(4px);
+    /* Playful nudge */
 }
 
 .userProfile {
     padding: 16px;
-    border-top: 1px solid #334155;
+    border-top: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     gap: 12px;
+    background-color: #fafafa;
 }
 
 .userInfo {
@@ -98,23 +113,27 @@
 
 .userRole {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: var(--text-secondary);
     text-transform: capitalize;
 }
 
 .iconBtn {
-    color: #94a3b8;
-    padding: 6px;
-    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: 50%;
+    /* Fully round circle buttons */
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s, color 0.2s;
+    transition: all 0.2s ease;
+    background-color: transparent;
 }
 
 .iconBtn:hover {
-    background-color: #334155;
-    color: white;
+    background-color: var(--border-color);
+    color: var(--primary-color);
+    transform: scale(1.1);
+    /* Pop effect */
 }
 
 /* CENTRAL AREA */

@@ -27,7 +27,7 @@ export function DesktopLayout() {
             {/* LEFT SIDEBAR */}
             <aside className={styles.sidebar}>
                 <div className={styles.brand}>
-                    <h1>EduPlan Pro</h1>
+                    <h1>🚀 TecnoKids Planillas</h1>
                     <span className={styles.badge}>Desktop</span>
                 </div>
 
