@@ -8,7 +8,6 @@
 .docListSidebar {
     width: 250px;
     background-color: var(--bg-primary);
-    /* Light cyan */
     border-right: 1px solid var(--border-color);
     padding: 20px;
     display: flex;
@@ -16,10 +15,12 @@
 }
 
 .docListSidebar h3 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-secondary);
     margin-bottom: 16px;
+    letter-spacing: 0.5px;
 }
 
 .docListSidebar ul {
@@ -31,33 +32,31 @@
 }
 
 .docListSidebar li {
-    padding: 12px 16px;
-    background: white;
-    border: 2px solid transparent;
-    border-radius: var(--radius-md);
-    /* Bubbly folders */
-    margin-bottom: 8px;
+    padding: 10px 12px;
+    background: transparent;
+    border-radius: var(--radius-sm);
+    margin-bottom: 4px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: background-color 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .docListSidebar li:hover {
-    border-color: var(--border-color);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    background-color: #e2e8f0;
 }
 
 .activeDoc {
-    border-color: var(--primary-color) !important;
-    background-color: white !important;
-    box-shadow: var(--shadow-md) !important;
+    background-color: var(--primary-light) !important;
+    color: var(--primary-hover);
 }
 
 .docTitle {
     display: block;
     font-weight: 500;
     font-size: 0.9rem;
+    color: var(--text-primary);
 }
 
 .docMeta {
@@ -89,48 +88,50 @@
 
 .uploadSection input,
 .uploadSection select {
-    padding: 10px 12px;
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 0.9rem;
-    transition: border-color 0.2s;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background-color: white;
 }
 
 .uploadSection input:focus,
 .uploadSection select:focus {
     outline: none;
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-light);
 }
 
 .btnPrimary {
     background-color: var(--primary-color);
     color: white;
-    padding: 10px 16px;
-    border-radius: var(--radius-lg);
-    /* Pill shaped */
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 6px -1px rgba(57, 176, 196, 0.2);
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+    box-shadow: var(--shadow-sm);
 }
 
 .btnPrimary:hover {
     background-color: var(--primary-hover);
-    transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
 
 .btnDanger {
     background-color: var(--danger-color);
     color: white;
-    padding: 10px 16px;
-    border-radius: var(--radius-lg);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
-    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
 }
 
 .btnDanger:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
+    background-color: #dc2626;
+    box-shadow: var(--shadow-sm);
 }
 
 .viewerArea {
@@ -196,23 +197,21 @@
 
 .aiMetadata {
     margin-top: 12px;
-    padding: 16px;
-    background: white;
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
+    padding: 12px;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
 }
 
 .badge {
     display: inline-block;
     background: var(--primary-color);
     color: white;
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: var(--radius-lg);
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
     margin-right: 8px;
     font-weight: 600;
-    box-shadow: 0 2px 4px rgba(57, 176, 196, 0.15);
 }
 
 .editorWrapper {
@@ -221,23 +220,28 @@
     min-height: 500px;
     display: flex;
     flex-direction: column;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: white;
+    box-shadow: var(--shadow-sm);
 }
 
 .btnSecondary {
     background-color: white;
-    color: var(--primary-color);
-    border: 2px solid var(--primary-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
     padding: 8px 16px;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    font-weight: 600;
-    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+    box-shadow: var(--shadow-sm);
 }
 
 .btnSecondary:hover {
-    background-color: var(--bg-primary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    background-color: #f1f5f9;
 }
 
 .btnSecondary:disabled {

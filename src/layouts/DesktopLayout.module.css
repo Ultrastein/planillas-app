@@ -174,10 +174,11 @@
     background-color: var(--primary-color);
     color: white;
     padding: 8px 16px;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     font-weight: 500;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: background 0.2s;
+    box-shadow: var(--shadow-sm);
 }
 
 .btnPrimary:hover {

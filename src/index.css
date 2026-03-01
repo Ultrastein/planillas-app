@@ -1,29 +1,45 @@
 :root {
-  /* TecnoKids Colors */
-  --bg-primary: #f0fdfa; /* Light cyan tint */
+  /* High-Contrast Professional TecnoKids Theme */
+  --bg-primary: #f8fafc;
+  /* Crisp light gray for workspace */
   --bg-secondary: #ffffff;
+  /* Pure white for cards */
+  --bg-sidebar: #0f172a;
+  /* Deep slate/navy for sidebar */
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --border-color: #ccfbf1;
-  --primary-color: #39B0C4; /* TecnoKids Cyan */
-  --primary-hover: #2d8f9f;
-  --danger-color: #ef4444; /* Bittersweet hint */
-  --success-color: #0A4E35; /* TecnoKids Bottle Green */
-  
-  --sidebar-width: 280px;
-  --right-panel-width: 340px;
-  
-  /* Modern Youthful Font */
-  --font-family: 'Outfit', 'Nunito', system-ui, sans-serif;
-  
-  /* Bubbly/Rounded Look */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  
-  /* Soft Shadows */
-  --shadow-sm: 0 2px 4px rgba(57, 176, 196, 0.1);
-  --shadow-md: 0 4px 6px -1px rgba(57, 176, 196, 0.1), 0 2px 4px -1px rgba(57, 176, 196, 0.06);
+  --text-light: #f8fafc;
+  /* Text on dark backgrounds */
+  --text-muted: #94a3b8;
+
+  --border-color: #e2e8f0;
+  /* Crisp borders */
+  --border-sidebar: #1e293b;
+
+  --primary-color: #39B0C4;
+  /* TecnoKids Cyan */
+  --primary-hover: #298d9e;
+  --primary-light: rgba(57, 176, 196, 0.1);
+
+  --danger-color: #ef4444;
+  --success-color: #0A4E35;
+  /* TecnoKids Bottle Green */
+
+  --sidebar-width: 260px;
+  /* Slightly slimmer for pro look */
+  --right-panel-width: 320px;
+
+  /* Modern Professional Font (keeping Outfit for brand consistency but can use weights) */
+  --font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+
+  /* Sleek, subtle rounded corners */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Crisp Professional Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
@@ -39,10 +55,13 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
-  overflow: hidden; /* Prevent horizontal scroll, strictly desktop */
+  overflow: hidden;
+  /* Prevent horizontal scroll, strictly desktop */
 }
 
-input, button, textarea {
+input,
+button,
+textarea {
   font-family: inherit;
 }
 
