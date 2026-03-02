@@ -257,19 +257,19 @@ export function DocumentEditor() {
     };
 
     const handleDelete = async (docId: string) => {
-        const reason = window.prompt("Por favor, escriba el motivo de la eliminación:");
-        if (!reason || reason.trim() === '') {
-            alert('El borrado requiere un motivo obligatorio.');
-            return;
-        }
+        const confirmDelete = window.confirm("¿Seguro que deseas eliminar esta planificación?");
+        if (!confirmDelete) return;
 
         try {
             const { error } = await supabase
                 .from('documents')
-                .update({ status: 'deleted', delete_reason: reason })
+                .update({ status: 'deleted', delete_reason: 'Eliminado por el usuario' })
                 .eq('id', docId);
 
             if (error) throw error;
+
+            setSelectedDoc(null);
+            setHasUnsavedChanges(false);
             fetchDocs();
         } catch (err: any) {
             alert('Error eliminando: ' + err.message);
