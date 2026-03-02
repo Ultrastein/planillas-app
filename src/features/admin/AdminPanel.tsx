@@ -121,6 +121,17 @@ export function AdminPanel() {
         }
     };
 
+    const handleUpdateUserRole = async (userId: string, newRole: 'admin' | 'titular' | 'colaborador') => {
+        try {
+            const { error } = await supabase.from('users').update({ role: newRole }).eq('id', userId);
+            if (error) throw error;
+            alert("Rol actualizado correctamente.");
+            fetchData();
+        } catch (err: any) {
+            setError('Error al actualizar rol: ' + err.message);
+        }
+    };
+
     const handleCreateNavTab = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -294,9 +305,17 @@ export function AdminPanel() {
                                         </td>
                                         <td>{u.email}</td>
                                         <td>
-                                            <span className={`${styles.roleBadge} ${styles[u.role]}`}>
-                                                {u.role === 'titular' ? 'Editor' : u.role === 'colaborador' ? 'Visualizador' : 'Admin'}
-                                            </span>
+                                            <select
+                                                value={u.role}
+                                                onChange={(e) => handleUpdateUserRole(u.id, e.target.value as any)}
+                                                disabled={u.id === currentUser?.id}
+                                                style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                                                title={u.id === currentUser?.id ? "No puedes cambiar tu propio rol" : "Cambiar rol del usuario"}
+                                            >
+                                                <option value="titular">Editor (Titular)</option>
+                                                <option value="colaborador">Lector (Colaborador)</option>
+                                                <option value="admin">Admin</option>
+                                            </select>
                                         </td>
                                         <td>{u.auth_provider === 'local' ? 'Manual' : 'Google'}</td>
                                         <td>
