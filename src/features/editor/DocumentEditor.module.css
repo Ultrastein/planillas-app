@@ -67,6 +67,10 @@
     box-shadow: var(--shadow-sm);
 }
 
+.folderChip>* {
+    pointer-events: none;
+}
+
 .folderChip:hover {
     background-color: var(--bg-primary);
     transform: translateY(-2px);

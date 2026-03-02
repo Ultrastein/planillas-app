@@ -587,6 +587,7 @@ export function DocumentEditor() {
                                                     <button
                                                         onClick={handleCreateNextClassQuickAction}
                                                         style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#dbeafe', color: 'var(--primary-hover)', border: '1px solid currentColor', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                        title="Crear una nueva clase conectada a esta"
                                                     >
                                                         <Plus size={14} /> Añadir Siguiente Clase
                                                     </button>
