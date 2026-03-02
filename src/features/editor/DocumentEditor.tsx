@@ -19,9 +19,17 @@ export function DocumentEditor() {
     const [documents, setDocuments] = useState<any[]>([]);
     const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [filterGrado, setFilterGrado] = useState<string>('');
+    const [filterHoras, setFilterHoras] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [showNewCatInput, setShowNewCatInput] = useState(false);
     const [newCatName, setNewCatName] = useState('');
+
+    // Reset internal filters when category changes
+    useEffect(() => {
+        setFilterGrado('');
+        setFilterHoras('');
+    }, [selectedCategory]);
 
     useEffect(() => {
         setSelectedDocId(selectedDoc?.id || null);
@@ -281,9 +289,20 @@ export function DocumentEditor() {
     const canCreateDocument = user?.role === 'admin' || user?.role === 'titular';
     const canEditSelected = selectedDoc ? (user?.role === 'admin' || (user?.role === 'titular' && selectedDoc.author_id === user?.id)) : false;
 
-    const filteredDocs = selectedCategory
+    const filteredDocs = documents.filter(d => {
+        const matchesCategory = selectedCategory ? (d.tematica === selectedCategory || (!d.tematica && selectedCategory === 'Sin Categorizar')) : true;
+        const matchesGrado = filterGrado ? d.grado === filterGrado : true;
+        const matchesHoras = filterHoras ? d.carga_horaria === filterHoras : true;
+        return matchesCategory && matchesGrado && matchesHoras;
+    });
+
+    // Derive dynamic filter options based on the currently viewed category
+    const categoryDocs = selectedCategory
         ? documents.filter(d => d.tematica === selectedCategory || (!d.tematica && selectedCategory === 'Sin Categorizar'))
         : documents;
+
+    const uniqueGrados = Array.from(new Set(categoryDocs.map(d => d.grado).filter(Boolean)));
+    const uniqueHoras = Array.from(new Set(categoryDocs.map(d => d.carga_horaria).filter(Boolean)));
 
     return (
         <div className={styles.centerContainer}>
@@ -346,6 +365,32 @@ export function DocumentEditor() {
                         <h4 style={{ padding: '0 12px', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: 600 }}>
                             Documentos en {selectedCategory || "Todas"}
                         </h4>
+
+                        {selectedCategory && (uniqueGrados.length > 0 || uniqueHoras.length > 0) && (
+                            <div style={{ padding: '0 12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {uniqueGrados.length > 0 && (
+                                    <select
+                                        value={filterGrado}
+                                        onChange={(e) => setFilterGrado(e.target.value)}
+                                        style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}
+                                    >
+                                        <option value="">Todos los Grados</option>
+                                        {uniqueGrados.map((g: any) => <option key={g} value={g}>{g}</option>)}
+                                    </select>
+                                )}
+                                {uniqueHoras.length > 0 && (
+                                    <select
+                                        value={filterHoras}
+                                        onChange={(e) => setFilterHoras(e.target.value)}
+                                        style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}
+                                    >
+                                        <option value="">Cualquier Carga Horaria</option>
+                                        {uniqueHoras.map((h: any) => <option key={h} value={h}>{h}</option>)}
+                                    </select>
+                                )}
+                            </div>
+                        )}
+
                         <ul className={styles.docList}>
                             {filteredDocs.map(d => (
                                 <li key={d.id}
@@ -360,7 +405,7 @@ export function DocumentEditor() {
                         </ul>
                     </div>
 
-                    {canCreateDocument && (
+                    {!selectedCategory && canCreateDocument && (
                         <div className={styles.uploadSection}>
                             <h4 style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: 600 }}>Selección de Material</h4>
                             <input
@@ -377,7 +422,7 @@ export function DocumentEditor() {
                             </select>
 
                             <select value={uploadCategory} onChange={(e: any) => setUploadCategory(e.target.value)}>
-                                <option value="">-- Seleccionar Temática (Opcional) --</option>
+                                <option value="">-- Sin Temática --</option>
                                 {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                             </select>
 
