@@ -7,7 +7,7 @@ import { useCategoryStore } from '../../store/useCategoryStore';
 import { RichTextEditor } from './RichTextEditor';
 import styles from './DocumentEditor.module.css';
 import * as mammoth from 'mammoth';
-import { Folder, FolderOpen, Plus, FileText } from 'lucide-react';
+import { Folder, FolderOpen, Plus, FileText, Search, X, ArrowLeft } from 'lucide-react';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
@@ -27,10 +27,15 @@ export function DocumentEditor() {
     const [hoveredDoc, setHoveredDoc] = useState<any | null>(null);
     const [mousePosition, setMousePosition] = useState({ top: 0, left: 0 });
 
+    // New States for Grid Layout
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
+
     // Reset internal filters when category changes
     useEffect(() => {
         setFilterGrado('');
         setFilterHoras('');
+        setSearchQuery('');
     }, [selectedCategory]);
 
     // Bug Fix: Clear selected doc if it doesn't belong to the newly filtered list
@@ -181,6 +186,7 @@ export function DocumentEditor() {
             setFileContent(null);
             setUploadFile(null);
             setGdocUrl('');
+            setIsCreating(false); // Close Modal
 
             await fetchDocs();
             setSelectedDoc(data);
@@ -320,7 +326,12 @@ export function DocumentEditor() {
         const matchesCategory = selectedCategory ? (d.tematica === selectedCategory || (!d.tematica && selectedCategory === 'Sin Categorizar')) : true;
         const matchesGrado = filterGrado ? d.grado === filterGrado : true;
         const matchesHoras = filterHoras ? d.carga_horaria === filterHoras : true;
-        return matchesCategory && matchesGrado && matchesHoras;
+        const matchesSearch = searchQuery ?
+            (d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                d.author_name.toLowerCase().includes(searchQuery.toLowerCase()))
+            : true;
+
+        return matchesCategory && matchesGrado && matchesHoras && matchesSearch;
     });
 
     // Derive dynamic filter options based on the currently viewed category
@@ -387,92 +398,235 @@ export function DocumentEditor() {
             </div>
 
             <div className={styles.lowerWorkspace}>
-                <div className={styles.docListSidebar}>
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                        <h4 style={{ padding: '0 12px', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: 600 }}>
-                            Documentos en {selectedCategory || "Todas"}
-                        </h4>
-
-                        {selectedCategory && (uniqueGrados.length > 0 || uniqueHoras.length > 0) && (
-                            <div style={{ padding: '0 12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                {uniqueGrados.length > 0 && (
-                                    <select
-                                        value={filterGrado}
-                                        onChange={(e) => setFilterGrado(e.target.value)}
-                                        style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                                    >
-                                        <option value="">Todos los Grados</option>
-                                        {uniqueGrados.map((g: any) => <option key={g} value={g}>{g}</option>)}
-                                    </select>
-                                )}
-                                {uniqueHoras.length > 0 && (
-                                    <select
-                                        value={filterHoras}
-                                        onChange={(e) => setFilterHoras(e.target.value)}
-                                        style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                                    >
-                                        <option value="">Cualquier Carga Horaria</option>
-                                        {uniqueHoras.map((h: any) => <option key={h} value={h}>{h}</option>)}
-                                    </select>
+                {!selectedDoc ? (
+                    // DASHBOARD GRID VIEW
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div className={styles.searchFilterArea}>
+                            <div className={styles.searchHeaderRow}>
+                                <div className={styles.searchInputWrapper}>
+                                    <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                                    <input
+                                        type="text"
+                                        className={styles.searchInput}
+                                        placeholder="Buscar por palabra clave, título o profesor..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        style={{ paddingLeft: '44px' }}
+                                    />
+                                </div>
+                                {canCreateDocument && (
+                                    <button className={styles.btnPrimary} onClick={() => setIsCreating(true)} style={{ padding: '12px 24px', fontSize: '1rem', flexShrink: 0 }}>
+                                        + Nueva Clase
+                                    </button>
                                 )}
                             </div>
-                        )}
 
-                        <ul className={styles.docList}>
-                            {filteredDocs.map(d => (
-                                <li key={d.id}
-                                    className={selectedDoc?.id === d.id ? styles.activeDoc : ''}
-                                    onClick={() => setSelectedDoc(d)}
-                                    // Tooltip Logic
-                                    onMouseEnter={(e) => {
-                                        const rect = e.currentTarget.getBoundingClientRect();
-                                        setMousePosition({ top: rect.top, left: rect.right + 10 });
-                                        setHoveredDoc(d);
-                                    }}
-                                    onMouseLeave={() => setHoveredDoc(null)}
-                                >
-                                    <span className={styles.docTitle}>{d.title}</span>
-                                    <span className={styles.docMeta}>{d.file_type.toUpperCase()}</span>
-                                </li>
-                            ))}
-                            {filteredDocs.length === 0 && <li className={styles.emptyLi}>No hay documentos aquí.</li>}
-                        </ul>
-                    </div>
-
-                    {/* HOVER TOOLTIP PORTAL */}
-                    {hoveredDoc && (
-                        <div
-                            className={styles.docTooltip}
-                            style={{ top: mousePosition.top, left: mousePosition.left }}
-                        >
-                            <h5>{hoveredDoc.title}</h5>
-                            {hoveredDoc.curso ? (
-                                <>
-                                    <p><strong>Curso:</strong> {hoveredDoc.curso} ({hoveredDoc.grado} {hoveredDoc.anio})</p>
-                                    <p><strong>Clase N°:</strong> {hoveredDoc.num_clase} | <strong>Horas:</strong> {hoveredDoc.carga_horaria}</p>
-                                    <p><strong>Temática:</strong> {hoveredDoc.tematica || 'Sin especificar'}</p>
-                                    {hoveredDoc.recursos && <p style={{ marginTop: 8 }}><strong>Recursos:</strong><br />{hoveredDoc.recursos}</p>}
-                                </>
-                            ) : (
-                                <p style={{ fontStyle: 'italic' }}>Este documento aún no ha sido analizado por la IA.</p>
+                            {/* Dropdown Filters beneath search */}
+                            {(uniqueGrados.length > 0 || uniqueHoras.length > 0) && (
+                                <div className={styles.filtersRow}>
+                                    {uniqueGrados.length > 0 && (
+                                        <select
+                                            value={filterGrado}
+                                            onChange={(e) => setFilterGrado(e.target.value)}
+                                            className={styles.filterSelect}
+                                        >
+                                            <option value="">Todos los Años (Grados)</option>
+                                            {uniqueGrados.map((g: any) => <option key={g} value={g}>{g}</option>)}
+                                        </select>
+                                    )}
+                                    {uniqueHoras.length > 0 && (
+                                        <select
+                                            value={filterHoras}
+                                            onChange={(e) => setFilterHoras(e.target.value)}
+                                            className={styles.filterSelect}
+                                        >
+                                            <option value="">Todas las Duraciones</option>
+                                            {uniqueHoras.map((h: any) => <option key={h} value={h}>{h}</option>)}
+                                        </select>
+                                    )}
+                                </div>
                             )}
                         </div>
-                    )}
 
-                    {!selectedCategory && canCreateDocument && (
+                        <div className={styles.docsGridContainer}>
+                            <div className={styles.docsGrid}>
+                                {filteredDocs.map(d => (
+                                    <div key={d.id} className={styles.docCard}>
+                                        <div className={styles.cardHeader}>
+                                            {d.tematica ? (
+                                                <span className={styles.cardBadge} style={{ backgroundColor: 'var(--primary-color)' }}>
+                                                    {d.tematica}
+                                                </span>
+                                            ) : (
+                                                <span className={styles.cardBadge} style={{ backgroundColor: '#94a3b8' }}>
+                                                    Sin Categorizar
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h4 className={styles.cardTitle}>{d.title}</h4>
+                                        <div className={styles.cardMeta}>
+                                            <span><strong>Profe:</strong> {d.author_name}</span>
+                                            {d.curso && <span><strong>Año:</strong> {d.grado} {d.anio}</span>}
+                                            {d.carga_horaria && <span><strong>Duración:</strong> {d.carga_horaria}</span>}
+                                        </div>
+                                        <div className={styles.cardAction} onClick={() => setSelectedDoc(d)}>
+                                            Abrir clase &rarr;
+                                        </div>
+                                    </div>
+                                ))}
+                                {filteredDocs.length === 0 && (
+                                    <div className={styles.emptyState}>
+                                        {searchQuery ? "No se encontraron coincidencias para tu búsqueda." : "No hay planificaciones en esta categoría."}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    // DOCUMENT VIEWER VIEW
+                    <div className={styles.viewerArea}>
+                        {selectedDoc ? (
+                            <>
+                                <div className={styles.docRibbon}>
+                                    <div style={{ flex: 1 }}>
+                                        <button className={styles.backBtn} onClick={() => setSelectedDoc(null)}>
+                                            <ArrowLeft size={16} /> Volver a la Lista
+                                        </button>
+                                        <h2>{selectedDoc.title}</h2>
+                                        <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
+
+                                        <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Temática:</span>
+                                                {canEditSelected ? (
+                                                    <select
+                                                        value={selectedDoc.tematica || ''}
+                                                        onChange={(e) => handleUpdateCategory(selectedDoc.id, e.target.value)}
+                                                        style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc' }}
+                                                    >
+                                                        <option value="">-- Sin Categorizar --</option>
+                                                        {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <span className={styles.badge} style={{ margin: 0, backgroundColor: 'var(--text-secondary)' }}>{selectedDoc.tematica || 'Sin Categorizar'}</span>
+                                                )}
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px' }}>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Clase Siguiente:</span>
+                                                {canEditSelected ? (
+                                                    <select
+                                                        value={selectedDoc.next_class_id || ''}
+                                                        onChange={(e) => handleUpdateNextClass(selectedDoc.id, e.target.value)}
+                                                        style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc', maxWidth: '200px' }}
+                                                    >
+                                                        <option value="">-- Sin Encadenar --</option>
+                                                        {/* Solo documentos de su misma categoría, distinto al propio seleccionado */}
+                                                        {documents
+                                                            .filter(d => (d.tematica === selectedDoc.tematica || (!d.tematica && !selectedDoc.tematica)) && d.id !== selectedDoc.id)
+                                                            .map(d => <option key={d.id} value={d.id}>{d.title} (Clase n° {d.num_clase || '?'})</option>)
+                                                        }
+                                                    </select>
+                                                ) : (
+                                                    <span style={{ fontSize: '0.85rem' }}>{documents.find(d => d.id === selectedDoc.next_class_id)?.title || 'Ninguna'}</span>
+                                                )}
+                                                {selectedDoc.next_class_id && (
+                                                    <button
+                                                        onClick={() => setSelectedDoc(documents.find(d => d.id === selectedDoc.next_class_id))}
+                                                        style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                                    >
+                                                        Saltar a Siguiente →
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {selectedDoc.curso && (
+                                            <div className={styles.aiMetadata} style={{ marginTop: '16px' }}>
+                                                <span className={styles.badge}>Curso: {selectedDoc.curso}</span>
+                                                <span className={styles.badge}>Grado: {selectedDoc.grado} {selectedDoc.anio}</span>
+                                                <span className={styles.badge}>Clase N°: {selectedDoc.num_clase}</span>
+                                                <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Carga Horaria:</strong> {selectedDoc.carga_horaria}</p>
+                                                <p style={{ fontSize: '0.85rem' }}><strong>Materiales Sugeridos:</strong> {selectedDoc.recursos}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className={styles.ribbonActions}>
+                                        {canEditSelected && (
+                                            <>
+                                                {selectedDoc.file_type === 'editor' && (
+                                                    <button className={styles.btnPrimary} onClick={handleCreateVersion} disabled={loading}>
+                                                        Guardar Versión
+                                                    </button>
+                                                )}
+                                                <button className={styles.btnSecondary} onClick={handleAIScan} disabled={loading}>
+                                                    {loading ? 'Analizando...' : 'Analizar con IA'}
+                                                </button>
+                                                <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className={styles.previewContainer}>
+                                    {selectedDoc.file_type === 'pdf' && selectedDoc.file_url && (
+                                        <iframe src={selectedDoc.file_url} width="100%" height="100%" title="PDF Prev" />
+                                    )}
+                                    {selectedDoc.file_type === 'word' && (
+                                        <div className={styles.wordPreview}>
+                                            {selectedDoc.file_url && <div style={{ marginBottom: 10 }}><a href={selectedDoc.file_url} target="_blank" rel="noreferrer">Descargar Original (.docx)</a></div>}
+                                            {selectedDoc.content || 'Vista previa no disponible.'}
+                                        </div>
+                                    )}
+                                    {selectedDoc.file_type === 'gdoc' && selectedDoc.file_url && (
+                                        <iframe src={selectedDoc.file_url} width="100%" height="100%" title="GDoc Prev" />
+                                    )}
+                                    {selectedDoc.file_type === 'editor' && (
+                                        <div className={styles.editorWrapper}>
+                                            <RichTextEditor
+                                                content={previewVersion ? (previewVersion.content || '') : (selectedDoc.content || '')}
+                                                onSave={(newContent) => handleAutoSave(selectedDoc.id, newContent)}
+                                                readOnly={!canEditSelected || !!previewVersion}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <div className={styles.noDocSelected}>
+                                <div style={{ textAlign: 'center' }}>
+                                    <FileText size={48} color="var(--border-color)" style={{ marginBottom: 16 }} />
+                                    <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Seleccione un documento o cargue uno nuevo</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* FLOATING CREATION MODAL */}
+            {isCreating && (
+                <div className={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) setIsCreating(false); }}>
+                    <div className={styles.uploadModal}>
+                        <div className={styles.modalHeader}>
+                            <h2>Nueva Clase</h2>
+                            <button className={styles.closeBtn} onClick={() => setIsCreating(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
                         <div className={styles.uploadSection}>
-                            <h4 style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: 600 }}>Selección de Material</h4>
                             <input
                                 type="text"
-                                placeholder="Título del nuevo material"
+                                placeholder="Título de la clase o material"
                                 value={uploadTitle}
                                 onChange={e => setUploadTitle(e.target.value)}
+                                autoFocus
                             />
                             <select value={uploadType} onChange={(e: any) => setUploadType(e.target.value)}>
-                                <option value="editor">Editor de Texto En App</option>
-                                <option value="word">Word (.docx)</option>
-                                <option value="pdf">Documento PDF</option>
-                                <option value="gdoc">Google Docs Link</option>
+                                <option value="editor">Editor de Texto Integrado</option>
+                                <option value="word">Documento Word (.docx)</option>
+                                <option value="pdf">Archivo PDF</option>
+                                <option value="gdoc">Enlace Google Docs</option>
                             </select>
 
                             <select value={uploadCategory} onChange={(e: any) => setUploadCategory(e.target.value)}>
@@ -485,131 +639,16 @@ export function DocumentEditor() {
                             )}
 
                             {uploadType === 'gdoc' && (
-                                <input type="url" placeholder="URL de Google Docs" value={gdocUrl} onChange={e => setGdocUrl(e.target.value)} />
+                                <input type="url" placeholder="URL de Google Docs Pública" value={gdocUrl} onChange={e => setGdocUrl(e.target.value)} />
                             )}
 
-                            <button className={styles.btnPrimary} onClick={handleSaveDocument} disabled={loading} style={{ marginTop: 8 }}>
-                                {loading ? 'Subiendo...' : 'Publicar Material'}
+                            <button className={styles.btnPrimary} onClick={handleSaveDocument} disabled={loading} style={{ marginTop: 12, padding: '12px' }}>
+                                {loading ? 'Subiendo...' : 'Crear y Publicar'}
                             </button>
                         </div>
-                    )}
+                    </div>
                 </div>
-
-                <div className={styles.viewerArea}>
-                    {selectedDoc ? (
-                        <>
-                            <div className={styles.docRibbon}>
-                                <div>
-                                    <h2>{selectedDoc.title}</h2>
-                                    <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
-
-                                    <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Temática:</span>
-                                            {canEditSelected ? (
-                                                <select
-                                                    value={selectedDoc.tematica || ''}
-                                                    onChange={(e) => handleUpdateCategory(selectedDoc.id, e.target.value)}
-                                                    style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc' }}
-                                                >
-                                                    <option value="">-- Sin Categorizar --</option>
-                                                    {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                                </select>
-                                            ) : (
-                                                <span className={styles.badge} style={{ margin: 0, backgroundColor: 'var(--text-secondary)' }}>{selectedDoc.tematica || 'Sin Categorizar'}</span>
-                                            )}
-                                        </div>
-
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px' }}>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Clase Siguiente:</span>
-                                            {canEditSelected ? (
-                                                <select
-                                                    value={selectedDoc.next_class_id || ''}
-                                                    onChange={(e) => handleUpdateNextClass(selectedDoc.id, e.target.value)}
-                                                    style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc', maxWidth: '200px' }}
-                                                >
-                                                    <option value="">-- Sin Encadenar --</option>
-                                                    {/* Solo documentos de su misma categoría, distinto al propio seleccionado */}
-                                                    {documents
-                                                        .filter(d => (d.tematica === selectedDoc.tematica || (!d.tematica && !selectedDoc.tematica)) && d.id !== selectedDoc.id)
-                                                        .map(d => <option key={d.id} value={d.id}>{d.title} (Clase n° {d.num_clase || '?'})</option>)
-                                                    }
-                                                </select>
-                                            ) : (
-                                                <span style={{ fontSize: '0.85rem' }}>{documents.find(d => d.id === selectedDoc.next_class_id)?.title || 'Ninguna'}</span>
-                                            )}
-                                            {selectedDoc.next_class_id && (
-                                                <button
-                                                    onClick={() => setSelectedDoc(documents.find(d => d.id === selectedDoc.next_class_id))}
-                                                    style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                                                >
-                                                    Saltar a Siguiente →
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {selectedDoc.curso && (
-                                        <div className={styles.aiMetadata} style={{ marginTop: '16px' }}>
-                                            <span className={styles.badge}>Curso: {selectedDoc.curso}</span>
-                                            <span className={styles.badge}>Grado: {selectedDoc.grado} {selectedDoc.anio}</span>
-                                            <span className={styles.badge}>Clase N°: {selectedDoc.num_clase}</span>
-                                            <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Carga Horaria:</strong> {selectedDoc.carga_horaria}</p>
-                                            <p style={{ fontSize: '0.85rem' }}><strong>Materiales Sugeridos:</strong> {selectedDoc.recursos}</p>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className={styles.ribbonActions}>
-                                    {canEditSelected && (
-                                        <>
-                                            {selectedDoc.file_type === 'editor' && (
-                                                <button className={styles.btnPrimary} onClick={handleCreateVersion} disabled={loading}>
-                                                    Guardar Versión
-                                                </button>
-                                            )}
-                                            <button className={styles.btnSecondary} onClick={handleAIScan} disabled={loading}>
-                                                {loading ? 'Analizando...' : 'Analizar con IA'}
-                                            </button>
-                                            <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className={styles.previewContainer}>
-                                {selectedDoc.file_type === 'pdf' && selectedDoc.file_url && (
-                                    <iframe src={selectedDoc.file_url} width="100%" height="100%" title="PDF Prev" />
-                                )}
-                                {selectedDoc.file_type === 'word' && (
-                                    <div className={styles.wordPreview}>
-                                        {selectedDoc.file_url && <div style={{ marginBottom: 10 }}><a href={selectedDoc.file_url} target="_blank" rel="noreferrer">Descargar Original (.docx)</a></div>}
-                                        {selectedDoc.content || 'Vista previa no disponible.'}
-                                    </div>
-                                )}
-                                {selectedDoc.file_type === 'gdoc' && selectedDoc.file_url && (
-                                    <iframe src={selectedDoc.file_url} width="100%" height="100%" title="GDoc Prev" />
-                                )}
-                                {selectedDoc.file_type === 'editor' && (
-                                    <div className={styles.editorWrapper}>
-                                        <RichTextEditor
-                                            content={previewVersion ? (previewVersion.content || '') : (selectedDoc.content || '')}
-                                            onSave={(newContent) => handleAutoSave(selectedDoc.id, newContent)}
-                                            readOnly={!canEditSelected || !!previewVersion}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    ) : (
-                        <div className={styles.noDocSelected}>
-                            <div style={{ textAlign: 'center' }}>
-                                <FileText size={48} color="var(--border-color)" style={{ marginBottom: 16 }} />
-                                <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Seleccione un documento o cargue uno nuevo</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
+            )}
         </div>
     );
 }
