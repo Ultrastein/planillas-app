@@ -341,6 +341,30 @@ export function DocumentEditor() {
 
     const handleUpdateNumClase = async (docId: string, newNum: string) => {
         try {
+            const parsedNewNum = parseInt(newNum);
+            if (!isNaN(parsedNewNum)) {
+                // Determine if we need to shift
+                const docToUpdate = documents.find(d => d.id === docId);
+                const tematica = docToUpdate?.tematica;
+
+                // Only consider checking if it's placed among existing classes
+                const existingSameNum = documents.find(d => d.tematica === tematica && d.id !== docId && parseInt(d.num_clase) === parsedNewNum);
+                if (existingSameNum) {
+                    const shift = window.confirm(`Ya existe la clase ${parsedNewNum} en esta temática. ¿Deseas insertar esta clase aquí y mover las siguientes una posición hacia adelante?`);
+                    if (shift) {
+                        const docsToShift = documents.filter(d => d.tematica === tematica && d.id !== docId && parseInt(d.num_clase) >= parsedNewNum);
+
+                        // Sort descending so we update the highest numbers first
+                        docsToShift.sort((a, b) => parseInt(b.num_clase) - parseInt(a.num_clase));
+
+                        for (const d of docsToShift) {
+                            const shiftedNum = parseInt(d.num_clase) + 1;
+                            await supabase.from('documents').update({ num_clase: shiftedNum.toString() }).eq('id', d.id);
+                        }
+                    }
+                }
+            }
+
             const { error } = await supabase.from('documents').update({ num_clase: newNum || null }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, num_clase: newNum || null } : prev);
@@ -348,6 +372,18 @@ export function DocumentEditor() {
             fetchDocs();
         } catch (err: any) {
             alert('Error al guardar número de clase: ' + err.message);
+        }
+    };
+
+    const handleUpdateMetadataField = async (docId: string, field: string, value: string) => {
+        try {
+            const { error } = await supabase.from('documents').update({ [field]: value || null }).eq('id', docId);
+            if (error) throw error;
+            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, [field]: value || null } : prev);
+            setHasUnsavedChanges(true);
+            fetchDocs();
+        } catch (err: any) {
+            alert(`Error al guardar ${field}: ` + err.message);
         }
     };
 
@@ -490,6 +526,12 @@ export function DocumentEditor() {
             : true;
 
         return matchesCategory && matchesGrado && matchesHoras && matchesSearch;
+    }).sort((a, b) => {
+        const numA = parseInt(a.num_clase);
+        const numB = parseInt(b.num_clase);
+        const validA = !isNaN(numA) ? numA : 999999;
+        const validB = !isNaN(numB) ? numB : 999999;
+        return validA - validB;
     });
 
     // Derive dynamic filter options based on the currently viewed category
@@ -781,12 +823,51 @@ export function DocumentEditor() {
                                             </div>
                                         </div>
 
-                                        {selectedDoc.curso && (
+                                        {(selectedDoc.curso || canEditSelected) && (
                                             <div className={styles.aiMetadata} style={{ marginTop: '16px' }}>
-                                                <span className={styles.badge}>Curso: {selectedDoc.curso}</span>
-                                                <span className={styles.badge}>Grado: {selectedDoc.grado} {selectedDoc.anio}</span>
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }} className={styles.badge}>
+                                                    <span>Curso: </span>
+                                                    {canEditSelected ? (
+                                                        <input
+                                                            type="text"
+                                                            value={selectedDoc.curso || ''}
+                                                            onChange={(e) => setSelectedDoc({ ...selectedDoc, curso: e.target.value })}
+                                                            onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'curso', e.target.value)}
+                                                            style={{ width: '120px', padding: '2px 4px', fontSize: 'inherit', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
+                                                            placeholder="Ej: Historia"
+                                                        />
+                                                    ) : (
+                                                        <span>{selectedDoc.curso || 'No especificado'}</span>
+                                                    )}
+                                                </div>
 
-                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }} className={styles.badge}>
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px', marginBottom: '8px' }} className={styles.badge}>
+                                                    <span>Grado y Año: </span>
+                                                    {canEditSelected ? (
+                                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                                            <input
+                                                                type="text"
+                                                                value={selectedDoc.grado || ''}
+                                                                onChange={(e) => setSelectedDoc({ ...selectedDoc, grado: e.target.value })}
+                                                                onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'grado', e.target.value)}
+                                                                style={{ width: '60px', padding: '2px 4px', fontSize: 'inherit', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
+                                                                placeholder="Grado"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={selectedDoc.anio || ''}
+                                                                onChange={(e) => setSelectedDoc({ ...selectedDoc, anio: e.target.value })}
+                                                                onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'anio', e.target.value)}
+                                                                style={{ width: '60px', padding: '2px 4px', fontSize: 'inherit', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
+                                                                placeholder="Año"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <span>{selectedDoc.grado} {selectedDoc.anio}</span>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px', marginBottom: '8px' }} className={styles.badge}>
                                                     <span>Clase N°: </span>
                                                     {canEditSelected ? (
                                                         <input
@@ -794,15 +875,30 @@ export function DocumentEditor() {
                                                             value={selectedDoc.num_clase || ''}
                                                             onChange={(e) => setSelectedDoc({ ...selectedDoc, num_clase: e.target.value })}
                                                             onBlur={(e) => handleUpdateNumClase(selectedDoc.id, e.target.value)}
-                                                            style={{ width: '40px', padding: '2px 4px', fontSize: 'inherit', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
-                                                            title="Escribe y haz click fuera para guardar"
+                                                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                            style={{ width: '50px', padding: '2px 4px', fontSize: 'inherit', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
+                                                            title="Escribe y haz click fuera (o Enter) para guardar"
                                                         />
                                                     ) : (
                                                         <span>{selectedDoc.num_clase || '?'}</span>
                                                     )}
                                                 </div>
 
-                                                <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Carga Horaria:</strong> {selectedDoc.carga_horaria}</p>
+                                                <p style={{ marginTop: 8, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <strong>Carga Horaria:</strong>
+                                                    {canEditSelected ? (
+                                                        <input
+                                                            type="text"
+                                                            value={selectedDoc.carga_horaria || ''}
+                                                            onChange={(e) => setSelectedDoc({ ...selectedDoc, carga_horaria: e.target.value })}
+                                                            onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'carga_horaria', e.target.value)}
+                                                            style={{ width: '150px', padding: '2px 4px', fontSize: 'inherit', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
+                                                            placeholder="Ej: 2 horas cátedra"
+                                                        />
+                                                    ) : (
+                                                        <span>{selectedDoc.carga_horaria || 'No especificada'}</span>
+                                                    )}
+                                                </p>
 
                                                 <div style={{ marginTop: 8 }}>
                                                     <p style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '4px' }}>Materiales y Recursos Sugeridos:</p>
