@@ -30,6 +30,7 @@ export function DocumentEditor() {
     // Upload state
     const [uploadType, setUploadType] = useState<'pdf' | 'word' | 'gdoc' | 'editor'>('editor');
     const [uploadTitle, setUploadTitle] = useState('');
+    const [uploadCategory, setUploadCategory] = useState('');
     const [gdocUrl, setGdocUrl] = useState('');
     const [fileContent, setFileContent] = useState<string | null>(null);
     const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -146,6 +147,7 @@ export function DocumentEditor() {
                 file_type: uploadType,
                 file_url: file_url || null,
                 content: content,
+                tematica: uploadCategory || null,
                 status: 'active'
             };
 
@@ -153,6 +155,7 @@ export function DocumentEditor() {
             if (error) throw error;
 
             setUploadTitle('');
+            setUploadCategory('');
             setFileContent(null);
             setUploadFile(null);
             setGdocUrl('');
@@ -183,6 +186,17 @@ export function DocumentEditor() {
             fetchDocs();
         } catch (err: any) {
             alert('Error eliminando: ' + err.message);
+        }
+    };
+
+    const handleUpdateCategory = async (docId: string, newCategory: string) => {
+        try {
+            const { error } = await supabase.from('documents').update({ tematica: newCategory || null }).eq('id', docId);
+            if (error) throw error;
+            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, tematica: newCategory || null } : prev);
+            fetchDocs();
+        } catch (err: any) {
+            alert('Error al actualizar temática: ' + err.message);
         }
     };
 
@@ -362,6 +376,11 @@ export function DocumentEditor() {
                                 <option value="gdoc">Google Docs Link</option>
                             </select>
 
+                            <select value={uploadCategory} onChange={(e: any) => setUploadCategory(e.target.value)}>
+                                <option value="">-- Seleccionar Temática (Opcional) --</option>
+                                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            </select>
+
                             {(uploadType === 'word' || uploadType === 'pdf') && (
                                 <input type="file" accept={uploadType === 'word' ? ".docx" : ".pdf"} onChange={handleFileUploadChange} />
                             )}
@@ -384,12 +403,29 @@ export function DocumentEditor() {
                                 <div>
                                     <h2>{selectedDoc.title}</h2>
                                     <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
+
+                                    <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Temática:</span>
+                                        {canEditSelected ? (
+                                            <select
+                                                value={selectedDoc.tematica || ''}
+                                                onChange={(e) => handleUpdateCategory(selectedDoc.id, e.target.value)}
+                                                style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc' }}
+                                            >
+                                                <option value="">-- Sin Categorizar --</option>
+                                                {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                            </select>
+                                        ) : (
+                                            <span className={styles.badge} style={{ margin: 0, backgroundColor: 'var(--text-secondary)' }}>{selectedDoc.tematica || 'Sin Categorizar'}</span>
+                                        )}
+                                    </div>
+
                                     {selectedDoc.curso && (
-                                        <div className={styles.aiMetadata}>
+                                        <div className={styles.aiMetadata} style={{ marginTop: '16px' }}>
                                             <span className={styles.badge}>Curso: {selectedDoc.curso}</span>
                                             <span className={styles.badge}>Grado: {selectedDoc.grado} {selectedDoc.anio}</span>
                                             <span className={styles.badge}>Clase N°: {selectedDoc.num_clase}</span>
-                                            <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Temática:</strong> {selectedDoc.tematica} | <strong>Carga:</strong> {selectedDoc.carga_horaria}</p>
+                                            <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Carga Horaria:</strong> {selectedDoc.carga_horaria}</p>
                                             <p style={{ fontSize: '0.85rem' }}><strong>Materiales Sugeridos:</strong> {selectedDoc.recursos}</p>
                                         </div>
                                     )}
