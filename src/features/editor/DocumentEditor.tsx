@@ -339,6 +339,18 @@ export function DocumentEditor() {
         }
     };
 
+    const handleUpdateNumClase = async (docId: string, newNum: string) => {
+        try {
+            const { error } = await supabase.from('documents').update({ num_clase: newNum || null }).eq('id', docId);
+            if (error) throw error;
+            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, num_clase: newNum || null } : prev);
+            setHasUnsavedChanges(true);
+            fetchDocs();
+        } catch (err: any) {
+            alert('Error al guardar número de clase: ' + err.message);
+        }
+    };
+
     const handleAutoSave = async (docId: string, newContent: string) => {
         try {
             const { error } = await supabase.from('documents').update({ content: newContent }).eq('id', docId);
@@ -764,7 +776,23 @@ export function DocumentEditor() {
                                             <div className={styles.aiMetadata} style={{ marginTop: '16px' }}>
                                                 <span className={styles.badge}>Curso: {selectedDoc.curso}</span>
                                                 <span className={styles.badge}>Grado: {selectedDoc.grado} {selectedDoc.anio}</span>
-                                                <span className={styles.badge}>Clase N°: {selectedDoc.num_clase}</span>
+
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }} className={styles.badge}>
+                                                    <span>Clase N°: </span>
+                                                    {canEditSelected ? (
+                                                        <input
+                                                            type="text"
+                                                            value={selectedDoc.num_clase || ''}
+                                                            onChange={(e) => setSelectedDoc({ ...selectedDoc, num_clase: e.target.value })}
+                                                            onBlur={(e) => handleUpdateNumClase(selectedDoc.id, e.target.value)}
+                                                            style={{ width: '40px', padding: '2px 4px', fontSize: 'inherit', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
+                                                            title="Escribe y haz click fuera para guardar"
+                                                        />
+                                                    ) : (
+                                                        <span>{selectedDoc.num_clase || '?'}</span>
+                                                    )}
+                                                </div>
+
                                                 <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Carga Horaria:</strong> {selectedDoc.carga_horaria}</p>
 
                                                 <div style={{ marginTop: 8 }}>
