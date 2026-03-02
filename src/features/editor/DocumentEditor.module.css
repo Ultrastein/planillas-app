@@ -54,27 +54,32 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
-    background-color: var(--bg-primary);
+    padding: 8px 18px;
+    background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 20px;
-    /* Pill shaped */
+    border-radius: var(--radius-lg);
     font-size: 0.85rem;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-secondary);
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    transition: var(--transition-smooth);
+    box-shadow: var(--shadow-sm);
 }
 
 .folderChip:hover {
-    background-color: #e2e8f0;
+    background-color: var(--bg-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: #cbd5e1;
 }
 
 .activeFolderChip {
-    background-color: var(--primary-light) !important;
+    background-color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
-    color: var(--primary-hover) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(57, 176, 196, 0.3) !important;
+    transform: translateY(-1px);
 }
 
 /* NEW: LOWER WORKSPACE GRID */
@@ -86,11 +91,13 @@
 
 .docListSidebar {
     width: 250px;
-    background-color: var(--bg-primary);
+    background-color: #ffffff;
     border-right: 1px solid var(--border-color);
     padding: 20px;
     display: flex;
     flex-direction: column;
+    z-index: 5;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
 }
 
 .docList {
@@ -102,19 +109,23 @@
 }
 
 .docList li {
-    padding: 10px 12px;
-    background: transparent;
-    border-radius: var(--radius-sm);
-    margin-bottom: 4px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    margin-bottom: 8px;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: var(--transition-smooth);
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
 .docList li:hover {
-    background-color: #e2e8f0;
+    background-color: #ffffff;
+    border-color: var(--border-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .activeDoc {
@@ -279,7 +290,8 @@
 
 .previewContainer {
     flex: 1;
-    background-color: #cbd5e1;
+    background-color: #f1f5f9;
+    /* Lighter more relaxing gray */
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -338,10 +350,10 @@
     display: flex;
     flex-direction: column;
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     background: white;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
 }
 
 .btnSecondary {

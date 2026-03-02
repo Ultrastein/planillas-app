@@ -13,6 +13,8 @@
     flex-direction: column;
     flex-shrink: 0;
     border-right: 1px solid var(--border-color);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
+    z-index: 20;
 }
 
 .brand {
@@ -75,23 +77,23 @@
 }
 
 .navSection li {
-    padding: 10px 16px;
+    padding: 12px 16px;
     font-size: 0.95rem;
     font-weight: 500;
     cursor: pointer;
     color: var(--text-secondary);
     border-radius: var(--radius-md);
-    /* Bubbly items */
-    transition: all 0.2s ease;
+    transition: var(--transition-smooth);
     margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .navSection li:hover {
-    background-color: var(--bg-primary);
-    /* Light hover */
+    background-color: var(--primary-light);
     color: var(--primary-color);
-    transform: translateX(4px);
-    /* Playful nudge */
+    transform: translateX(6px);
 }
 
 .userProfile {
@@ -148,11 +150,8 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    background-color: #ffffff;
+    background-color: #f8fafc;
     min-width: 0;
-    /* Important for preventing flex blowout */
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
-    /* separate from sidebar/panel */
     z-index: 10;
 }
 
@@ -183,10 +182,19 @@
     align-items: center;
     gap: 12px;
     padding: 6px 16px;
-    background-color: var(--bg-primary);
+    background-color: white;
     border: 1px solid var(--border-color);
     border-radius: 50px;
     /* Pill shape for header */
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-smooth);
+    cursor: pointer;
+}
+
+.headerProfile:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--primary-color);
 }
 
 .userInfoHeader {
@@ -227,16 +235,18 @@
 .btnPrimary {
     background-color: var(--primary-color);
     color: white;
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
-    font-weight: 500;
-    font-size: 0.85rem;
-    transition: background 0.2s;
-    box-shadow: var(--shadow-sm);
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: var(--transition-smooth);
+    box-shadow: 0 4px 10px rgba(57, 176, 196, 0.3);
 }
 
 .btnPrimary:hover {
     background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(57, 176, 196, 0.4);
 }
 
 .editorArea {

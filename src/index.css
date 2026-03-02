@@ -14,32 +14,34 @@
 
   --border-color: #e2e8f0;
   /* Crisp borders */
-  --border-sidebar: #1e293b;
+  --border-sidebar: #f1f5f9;
 
   --primary-color: #39B0C4;
   /* TecnoKids Cyan */
-  --primary-hover: #298d9e;
-  --primary-light: rgba(57, 176, 196, 0.1);
+  --primary-hover: #2dbad1;
+  --primary-light: rgba(57, 176, 196, 0.15);
 
-  --danger-color: #ef4444;
-  --success-color: #0A4E35;
-  /* TecnoKids Bottle Green */
+  --danger-color: #f43f5e;
+  --success-color: #10b981;
 
-  --sidebar-width: 220px;
-  /* Slightly slimmer for pro look */
-  --right-panel-width: 300px;
+  --sidebar-width: 240px;
+  /* Slightly wider, relaxed */
+  --right-panel-width: 320px;
 
   /* Modern Professional Font (keeping Outfit for brand consistency but can use weights) */
   --font-family: 'Outfit', 'Inter', system-ui, sans-serif;
 
-  /* Sleek, subtle rounded corners */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  /* Amigables, bubbly rounded corners */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
 
-  /* Crisp Professional Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  /* Softer, deeper shadows for that floating glass feel */
+  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
