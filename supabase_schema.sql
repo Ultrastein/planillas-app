@@ -126,6 +126,12 @@ create policy "Authors can update their own documents (soft delete)"
   to authenticated
   using ( author_id = auth.uid() OR coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );
 
+DROP POLICY IF EXISTS "Admins can hard delete documents" ON public.documents;
+create policy "Admins can hard delete documents"
+  on documents for delete
+  to authenticated
+  using ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );
+
 -- 3. Create Comments Table
 CREATE TABLE IF NOT EXISTS public.comments (
   id uuid default gen_random_uuid() primary key,
