@@ -62,10 +62,48 @@ export function DocumentEditor() {
     const [pendingChainFromDocId, setPendingChainFromDocId] = useState<string | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+    // New states for admin author change and comments
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [comments, setComments] = useState<any[]>([]);
+    const [newCommentText, setNewCommentText] = useState('');
+
     useEffect(() => {
         fetchDocs();
         fetchCategories();
     }, [fetchCategories]);
+
+    useEffect(() => {
+        if (user?.role === 'admin') {
+            fetchAllUsers();
+        }
+    }, [user?.role]);
+
+    useEffect(() => {
+        if (selectedDoc) {
+            fetchComments();
+        } else {
+            setComments([]);
+        }
+    }, [selectedDoc?.id]);
+
+    const fetchAllUsers = async () => {
+        try {
+            const { data, error } = await supabase.from('users').select('*');
+            if (!error && data) setAllUsers(data);
+        } catch (err) {
+            console.error("Error fetching users", err);
+        }
+    };
+
+    const fetchComments = async () => {
+        if (!selectedDoc) return;
+        try {
+            const { data, error } = await supabase.from('comments').select('*').eq('document_id', selectedDoc.id).order('created_at', { ascending: true });
+            if (!error && data) setComments(data);
+        } catch (err) {
+            console.error("Error fetching comments", err);
+        }
+    };
 
     const fetchDocs = async () => {
         try {
@@ -283,6 +321,42 @@ export function DocumentEditor() {
             setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error updating recursos:', err);
+        }
+    };
+
+    const handleUpdateAuthor = async (docId: string, newAuthorId: string) => {
+        const newUser = allUsers.find(u => u.id === newAuthorId);
+        if (!newUser) return;
+        try {
+            const updates = { author_id: newUser.id, author_name: newUser.name, author_role: newUser.role };
+            const { error } = await supabase.from('documents').update(updates).eq('id', docId);
+            if (error) throw error;
+            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, ...updates } : prev);
+            setHasUnsavedChanges(true);
+            fetchDocs();
+        } catch (err: any) {
+            alert('Error al actualizar docente: ' + err.message);
+        }
+    };
+
+    const handleAddComment = async () => {
+        if (!newCommentText.trim() || !user || !selectedDoc) return;
+        try {
+            const { error } = await supabase.from('comments').insert({
+                document_id: selectedDoc.id,
+                author_id: user.id,
+                author_name: user.name,
+                text: newCommentText.trim()
+            });
+            if (error) {
+                // Ignore schema warnings if table is missing, but notify user
+                alert('Aviso conectando comentarios. Err: ' + error.message);
+                return;
+            }
+            setNewCommentText('');
+            fetchComments();
+        } catch (err: any) {
+            console.error('Error adding comment:', err);
         }
     };
 
@@ -538,7 +612,24 @@ export function DocumentEditor() {
                                                 {hasUnsavedChanges ? "Guardar y Cerrar *" : "Cerrar"} <ArrowLeft size={18} style={{ transform: 'rotate(180deg)' }} />
                                             </button>
                                         </div>
-                                        <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                            <p style={{ margin: 0 }}><strong>Autor:</strong></p>
+                                            {user?.role === 'admin' ? (
+                                                <select
+                                                    value={selectedDoc.author_id}
+                                                    onChange={(e) => handleUpdateAuthor(selectedDoc.id, e.target.value)}
+                                                    style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                                                    title="Cambiar el docente asignado a esta clase (solo Admins)"
+                                                >
+                                                    {allUsers.map((u) => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <p style={{ margin: 0 }}>{selectedDoc.author_name}</p>
+                                            )}
+                                            <p style={{ margin: 0, marginLeft: '8px' }}>| <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
+                                        </div>
 
                                         <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -663,6 +754,42 @@ export function DocumentEditor() {
                                             />
                                         </div>
                                     )}
+                                </div>
+
+                                {/* COMMENTS SECTION */}
+                                <div className={styles.commentsContainer}>
+                                    <h4 style={{ marginBottom: '16px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Comentarios y Sugerencias</h4>
+                                    <div className={styles.commentsList}>
+                                        {comments.length === 0 ? (
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Aún no hay comentarios. Sé el primero en opinar.</p>
+                                        ) : (
+                                            comments.map(comment => (
+                                                <div key={comment.id} className={styles.commentItem}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                        <strong>{comment.author_name}</strong>
+                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(comment.created_at).toLocaleString()}</span>
+                                                    </div>
+                                                    <p style={{ margin: 0, fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{comment.text}</p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                    <div className={styles.addCommentBox}>
+                                        <textarea
+                                            value={newCommentText}
+                                            onChange={(e) => setNewCommentText(e.target.value)}
+                                            placeholder="Escribe un comentario o sugerencia sobre esta clase..."
+                                            style={{ width: '100%', minHeight: '60px', padding: '10px', fontSize: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', resize: 'vertical' }}
+                                        />
+                                        <button
+                                            className={styles.btnPrimary}
+                                            style={{ alignSelf: 'flex-end', marginTop: '8px' }}
+                                            onClick={handleAddComment}
+                                            disabled={!newCommentText.trim()}
+                                        >
+                                            Publicar Comentario
+                                        </button>
+                                    </div>
                                 </div>
                             </>
                         ) : (
