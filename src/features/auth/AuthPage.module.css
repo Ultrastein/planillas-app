@@ -25,6 +25,13 @@
     margin-bottom: 8px;
 }
 
+.logoImage {
+    max-width: 220px;
+    height: auto;
+    object-fit: contain;
+    margin-bottom: 12px;
+}
+
 .brand h1 {
     font-size: 1.75rem;
     font-weight: 700;

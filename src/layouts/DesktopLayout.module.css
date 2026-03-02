@@ -19,8 +19,15 @@
     padding: 24px;
     border-bottom: 1px solid var(--border-color);
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 4px;
+}
+
+.logoImage {
+    max-width: 180px;
+    height: auto;
+    object-fit: contain;
 }
 
 .brand h1 {

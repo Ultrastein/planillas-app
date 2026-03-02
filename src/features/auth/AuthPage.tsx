@@ -71,7 +71,7 @@ export function AuthPage() {
         <div className={styles.authContainer}>
             <div className={styles.authCard}>
                 <div className={styles.brand}>
-                    <h1>EduPlan Pro</h1>
+                    <img src="/logo.png" alt="TecnoKids Logo" className={styles.logoImage} />
                     <p>Gestión avanzada de planificaciones docentes</p>
                 </div>
 

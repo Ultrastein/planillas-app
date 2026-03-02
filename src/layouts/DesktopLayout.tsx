@@ -27,8 +27,8 @@ export function DesktopLayout() {
             {/* LEFT SIDEBAR */}
             <aside className={styles.sidebar}>
                 <div className={styles.brand}>
-                    <h1>🚀 TecnoKids Planillas</h1>
-                    <span className={styles.badge}>Desktop</span>
+                    <img src="/logo.png" alt="TecnoKids Logo" className={styles.logoImage} />
+                    <span className={styles.badge} style={{ marginTop: 8 }}>Desktop</span>
                 </div>
 
                 <nav className={styles.navTree}>
