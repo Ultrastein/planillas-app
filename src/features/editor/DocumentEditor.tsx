@@ -24,6 +24,7 @@ export function DocumentEditor() {
     const [loading, setLoading] = useState(false);
     const [showNewCatInput, setShowNewCatInput] = useState(false);
     const [newCatName, setNewCatName] = useState('');
+    const [creationNumClase, setCreationNumClase] = useState(''); // New State for Creation Modal Class Number
 
     // New States for Grid Layout
     const [searchQuery, setSearchQuery] = useState('');
@@ -211,14 +212,21 @@ export function DocumentEditor() {
                 file_url: file_url || null,
                 content: content,
                 tematica: uploadCategory || null,
+                num_clase: creationNumClase || null, // Guardar el número de clase inicial
                 status: 'active'
             };
 
             const { data, error } = await supabase.from('documents').insert(newDoc).select().single();
             if (error) throw error;
 
+            if (creationNumClase) {
+                // Determine if we need to shift other classes for the newly inserted document
+                await handleClassNumberShift(data.id, uploadCategory, creationNumClase);
+            }
+
             setUploadTitle('');
             setUploadCategory('');
+            setCreationNumClase(''); // Cleanup
             setFileContent(null);
             setUploadFile(null);
             setGdocUrl('');
@@ -246,9 +254,11 @@ export function DocumentEditor() {
 
         let nextNumber = 2;
         if (selectedDoc.num_clase) {
-            const parsed = parseInt(selectedDoc.num_clase);
-            if (!isNaN(parsed)) nextNumber = parsed + 1;
+            const parsed = parseFloat(selectedDoc.num_clase.replace(',', '.')); // Soporte comas o puntos
+            if (!isNaN(parsed)) nextNumber = Math.floor(parsed) + 1; // Increment by 1 from floor value
         }
+
+        setCreationNumClase(nextNumber.toString()); // Pre-fill number for immediate linking without user effort
 
         setUploadTitle(`${selectedDoc.title} (Clase ${nextNumber})`);
         setIsCreating(true);
@@ -339,30 +349,53 @@ export function DocumentEditor() {
         }
     };
 
+    // Helper function for reusable shift logic (used in edit and create)
+    const handleClassNumberShift = async (docIdToIgnore: string, tematica: string | null, newNumStr: string) => {
+        const parsedNewNum = parseFloat(newNumStr.replace(',', '.'));
+        if (isNaN(parsedNewNum)) return;
+
+        // Comprobamos si la nueva clase ocupará el número de una existente
+        const existingSameNum = documents.find(d =>
+            d.tematica === tematica &&
+            d.id !== docIdToIgnore &&
+            parseFloat(d.num_clase?.replace(',', '.') || 'NaN') === parsedNewNum
+        );
+
+        if (existingSameNum) {
+            const shift = window.confirm(`Ya existe la clase ${parsedNewNum} en esta temática. ¿Deseas insertar esta clase aquí y mover las siguientes una posición hacia adelante?`);
+            if (shift) {
+                // Obtener todas las clases mayores o iguales
+                const docsToShift = documents.filter(d =>
+                    d.tematica === tematica &&
+                    d.id !== docIdToIgnore &&
+                    parseFloat(d.num_clase?.replace(',', '.') || 'NaN') >= parsedNewNum
+                );
+
+                // Sort descending so we update the highest numbers first to avoid collisions
+                docsToShift.sort((a, b) => {
+                    const aNum = parseFloat(a.num_clase?.replace(',', '.') || '0');
+                    const bNum = parseFloat(b.num_clase?.replace(',', '.') || '0');
+                    return bNum - aNum;
+                });
+
+                for (const d of docsToShift) {
+                    const oldVal = parseFloat(d.num_clase?.replace(',', '.') || '0');
+                    // Desplazamos sumando 1
+                    const shiftedNum = oldVal + 1;
+                    await supabase.from('documents').update({ num_clase: shiftedNum.toString() }).eq('id', d.id);
+                }
+            }
+        }
+    };
+
     const handleUpdateNumClase = async (docId: string, newNum: string) => {
         try {
-            const parsedNewNum = parseInt(newNum);
+            const parsedNewNum = parseFloat(newNum.replace(',', '.'));
             if (!isNaN(parsedNewNum)) {
-                // Determine if we need to shift
                 const docToUpdate = documents.find(d => d.id === docId);
-                const tematica = docToUpdate?.tematica;
+                const tematica = docToUpdate?.tematica || null;
 
-                // Only consider checking if it's placed among existing classes
-                const existingSameNum = documents.find(d => d.tematica === tematica && d.id !== docId && parseInt(d.num_clase) === parsedNewNum);
-                if (existingSameNum) {
-                    const shift = window.confirm(`Ya existe la clase ${parsedNewNum} en esta temática. ¿Deseas insertar esta clase aquí y mover las siguientes una posición hacia adelante?`);
-                    if (shift) {
-                        const docsToShift = documents.filter(d => d.tematica === tematica && d.id !== docId && parseInt(d.num_clase) >= parsedNewNum);
-
-                        // Sort descending so we update the highest numbers first
-                        docsToShift.sort((a, b) => parseInt(b.num_clase) - parseInt(a.num_clase));
-
-                        for (const d of docsToShift) {
-                            const shiftedNum = parseInt(d.num_clase) + 1;
-                            await supabase.from('documents').update({ num_clase: shiftedNum.toString() }).eq('id', d.id);
-                        }
-                    }
-                }
+                await handleClassNumberShift(docId, tematica, newNum);
             }
 
             const { error } = await supabase.from('documents').update({ num_clase: newNum || null }).eq('id', docId);
@@ -527,10 +560,18 @@ export function DocumentEditor() {
 
         return matchesCategory && matchesGrado && matchesHoras && matchesSearch;
     }).sort((a, b) => {
-        const numA = parseInt(a.num_clase);
-        const numB = parseInt(b.num_clase);
+        // We use parseFloat to handle decimal insertions correctly (e.g. 1.5)
+        const parseNum = (val: string) => parseFloat(val?.replace(',', '.') || 'NaN');
+        const numA = parseNum(a.num_clase);
+        const numB = parseNum(b.num_clase);
+
         const validA = !isNaN(numA) ? numA : 999999;
         const validB = !isNaN(numB) ? numB : 999999;
+
+        // Secondary sort by date if class numbers match or neither has one
+        if (validA === validB) {
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }
         return validA - validB;
     });
 
@@ -636,6 +677,7 @@ export function DocumentEditor() {
                                             value={filterGrado}
                                             onChange={(e) => setFilterGrado(e.target.value)}
                                             className={styles.filterSelect}
+                                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }}
                                         >
                                             <option value="">Todos los Años (Grados)</option>
                                             {uniqueGrados.map((g: any) => <option key={g} value={g}>{g}</option>)}
@@ -646,6 +688,7 @@ export function DocumentEditor() {
                                             value={filterHoras}
                                             onChange={(e) => setFilterHoras(e.target.value)}
                                             className={styles.filterSelect}
+                                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }}
                                         >
                                             <option value="">Todas las Duraciones</option>
                                             {uniqueHoras.map((h: any) => <option key={h} value={h}>{h}</option>)}
@@ -671,7 +714,7 @@ export function DocumentEditor() {
                                                     </span>
                                                 )}
                                                 {/* Indicates chained class visually on the card */}
-                                                {(d.next_class_id || d.num_clase) && (
+                                                {(d.num_clase) && (
                                                     <span className={styles.cardBadge} style={{ backgroundColor: '#3b82f6', fontSize: '0.7rem' }}>
                                                         Clase {d.num_clase || '?'} 🔗
                                                     </span>
@@ -755,70 +798,78 @@ export function DocumentEditor() {
                                             </div>
 
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px' }}>
-                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Clase Siguiente:</span>
-                                                {canEditSelected ? (
-                                                    <select
-                                                        value={selectedDoc.next_class_id || ''}
-                                                        onChange={(e) => handleUpdateNextClass(selectedDoc.id, e.target.value)}
-                                                        style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc', maxWidth: '200px' }}
-                                                    >
-                                                        <option value="">-- Sin Encadenar --</option>
-                                                        {documents
-                                                            .filter(d => (d.tematica === selectedDoc.tematica || (!d.tematica && !selectedDoc.tematica)) && d.id !== selectedDoc.id)
-                                                            .map(d => <option key={d.id} value={d.id}>{d.title} (Clase n° {d.num_clase || '?'})</option>)
-                                                        }
-                                                    </select>
-                                                ) : (
-                                                    <span style={{ fontSize: '0.85rem' }}>{documents.find(d => d.id === selectedDoc.next_class_id)?.title || 'Ninguna'}</span>
-                                                )}
 
                                                 <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
-                                                    {documents.some(d => d.next_class_id === selectedDoc.id) && (
-                                                        <button
-                                                            onClick={() => setSelectedDoc(documents.find(d => d.next_class_id === selectedDoc.id))}
-                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                            title="Ir a la clase anterior encadenada"
-                                                        >
-                                                            &larr; Clase Anterior
-                                                        </button>
-                                                    )}
-                                                    {selectedDoc.next_class_id && (
-                                                        <button
-                                                            onClick={() => setSelectedDoc(documents.find(d => d.id === selectedDoc.next_class_id))}
-                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                            title="Ir directamente a la siguiente clase encadenada"
-                                                        >
-                                                            Siguiente Clase &rarr;
-                                                        </button>
-                                                    )}
-                                                    {(selectedDoc.next_class_id || documents.some(d => d.next_class_id === selectedDoc.id)) && (
-                                                        <button
-                                                            onClick={async () => {
-                                                                // Temporarily view only documents in this chain
-                                                                const categoryId = selectedDoc.tematica || 'Sin Categorizar';
-                                                                if (selectedCategory !== categoryId) setSelectedCategory(categoryId);
+                                                    {(() => {
+                                                        // Dynamically compute Next and Previous classes based strictly on numerical sequence
+                                                        const docTematica = selectedDoc.tematica;
+                                                        const currentParsedNum = parseFloat(selectedDoc.num_clase?.replace(',', '.') || 'NaN');
 
-                                                                // Provide clear visual feedback since it filters via search conceptually
-                                                                // We use the category filter along with a search hint
-                                                                // This is a simplified "view all" by filtering the view to the current category.
-                                                                alert('Viendo todas las clases de la temática: ' + categoryId + '. Vuelve a seleccionar la carpeta "Todas" para quitar el filtro.');
-                                                                setSelectedDoc(null);
-                                                            }}
-                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#e2e8f0', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                            title="Ver todas las clases de esta temática en la cuadrícula"
-                                                        >
-                                                            Ver toda la temática
-                                                        </button>
-                                                    )}
-                                                    {!selectedDoc.next_class_id && canEditSelected && (
-                                                        <button
-                                                            onClick={handleCreateNextClassQuickAction}
-                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#dbeafe', color: 'var(--primary-hover)', border: '1px solid currentColor', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                            title="Crear una nueva clase conectada a esta"
-                                                        >
-                                                            <Plus size={14} /> Añadir Siguiente Clase
-                                                        </button>
-                                                    )}
+                                                        // Filter docs in same tematica with valid numbers
+                                                        const siblingDocs = documents
+                                                            .filter(d => d.tematica === docTematica && d.id !== selectedDoc.id)
+                                                            .map(d => ({ ...d, parsedNum: parseFloat(d.num_clase?.replace(',', '.') || 'NaN') }))
+                                                            .filter(d => !isNaN(d.parsedNum))
+                                                            .sort((a, b) => a.parsedNum - b.parsedNum); // Ascending order
+
+                                                        // Find immediate previous/next linearly
+                                                        let prevClass = null;
+                                                        let nextClass = null;
+
+                                                        if (!isNaN(currentParsedNum)) {
+                                                            // For preceding class, find largest number strictly less than current (descending array)
+                                                            prevClass = [...siblingDocs].reverse().find(d => d.parsedNum < currentParsedNum);
+                                                            // For next class, find smallest number strictly greater than current
+                                                            nextClass = siblingDocs.find(d => d.parsedNum > currentParsedNum);
+                                                        }
+
+                                                        return (
+                                                            <>
+                                                                {prevClass && (
+                                                                    <button
+                                                                        onClick={() => setSelectedDoc(documents.find(d => d.id === prevClass.id))}
+                                                                        style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                        title={`Ir a ${prevClass.title}`}
+                                                                    >
+                                                                        &larr; Clase Anterior ({prevClass.num_clase})
+                                                                    </button>
+                                                                )}
+                                                                {nextClass && (
+                                                                    <button
+                                                                        onClick={() => setSelectedDoc(documents.find(d => d.id === nextClass.id))}
+                                                                        style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                        title={`Ir a ${nextClass.title}`}
+                                                                    >
+                                                                        Siguiente Clase ({nextClass.num_clase}) &rarr;
+                                                                    </button>
+                                                                )}
+                                                                {(prevClass || nextClass || !isNaN(currentParsedNum)) && (
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const categoryId = selectedDoc.tematica || 'Sin Categorizar';
+                                                                            if (selectedCategory !== categoryId) setSelectedCategory(categoryId);
+
+                                                                            // This acts as "ver temática completa" and lists sorted numerically (already sorted in filteredDocs logic)
+                                                                            setSelectedDoc(null);
+                                                                        }}
+                                                                        style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#e2e8f0', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                        title="Ver todas las clases de esta temática en la cuadrícula, ordenadas"
+                                                                    >
+                                                                        Ver toda la temática
+                                                                    </button>
+                                                                )}
+                                                                {!nextClass && canEditSelected && !isNaN(currentParsedNum) && (
+                                                                    <button
+                                                                        onClick={handleCreateNextClassQuickAction}
+                                                                        style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#dbeafe', color: 'var(--primary-hover)', border: '1px solid currentColor', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                        title="Crear una nueva clase conectada a esta"
+                                                                    >
+                                                                        <Plus size={14} /> Añadir Siguiente
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                         </div>
@@ -1036,17 +1087,26 @@ export function DocumentEditor() {
                                 <option value="gdoc">Enlace Google Docs</option>
                             </select>
 
-                            <select value={uploadCategory} onChange={(e: any) => setUploadCategory(e.target.value)}>
-                                <option value="">-- Sin Temática --</option>
-                                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                            </select>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', marginBottom: '12px' }}>
+                                <select value={uploadCategory} onChange={(e: any) => setUploadCategory(e.target.value)} style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%' }}>
+                                    <option value="">-- Sin Temática --</option>
+                                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                </select>
+                                <input
+                                    type="text"
+                                    placeholder="N° de Clase (Ej: 1 o 1.5)"
+                                    value={creationNumClase}
+                                    onChange={e => setCreationNumClase(e.target.value)}
+                                    style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%' }}
+                                />
+                            </div>
 
                             {(uploadType === 'word' || uploadType === 'pdf') && (
-                                <input type="file" accept={uploadType === 'word' ? ".docx" : ".pdf"} onChange={handleFileUploadChange} />
+                                <input type="file" accept={uploadType === 'word' ? ".docx" : ".pdf"} onChange={handleFileUploadChange} style={{ marginBottom: '12px', width: '100%' }} />
                             )}
 
                             {uploadType === 'gdoc' && (
-                                <input type="url" placeholder="URL de Google Docs Pública" value={gdocUrl} onChange={e => setGdocUrl(e.target.value)} />
+                                <input type="url" placeholder="URL de Google Docs Pública" value={gdocUrl} onChange={e => setGdocUrl(e.target.value)} style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%', marginBottom: '12px' }} />
                             )}
 
                             <button className={styles.btnPrimary} onClick={handleSaveDocument} disabled={loading} style={{ marginTop: 12, padding: '12px' }}>
