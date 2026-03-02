@@ -111,9 +111,7 @@ export function DocumentEditor() {
             if (error) throw error;
             setDocuments(data || []);
 
-            if (!selectedDoc && data && data.length > 0) {
-                setSelectedDoc(data[0]);
-            } else if (selectedDoc && !data?.find(d => d.id === selectedDoc.id)) {
+            if (selectedDoc && !data?.find(d => d.id === selectedDoc.id)) {
                 setSelectedDoc(null);
             }
         } catch (err) {
