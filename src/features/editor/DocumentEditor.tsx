@@ -60,6 +60,7 @@ export function DocumentEditor() {
     const [fileContent, setFileContent] = useState<string | null>(null);
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [pendingChainFromDocId, setPendingChainFromDocId] = useState<string | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     useEffect(() => {
         fetchDocs();
@@ -242,6 +243,7 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update({ tematica: newCategory || null }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, tematica: newCategory || null } : prev);
+            setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
             alert('Error al actualizar temática: ' + err.message);
@@ -253,6 +255,7 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update({ next_class_id: nextClassId || null }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, next_class_id: nextClassId || null } : prev);
+            setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
             console.error('Error al guardar siguiente clase:', err);
@@ -266,6 +269,7 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update({ content: newContent }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, content: newContent } : prev);
+            setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error auto-saving:', err);
         }
@@ -276,6 +280,7 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update({ recursos: newRecursos }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, recursos: newRecursos } : prev);
+            setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error updating recursos:', err);
         }
@@ -522,12 +527,15 @@ export function DocumentEditor() {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                             <h2>{selectedDoc.title}</h2>
                                             <button
-                                                className={styles.btnPrimary}
-                                                onClick={() => setSelectedDoc(null)}
+                                                className={hasUnsavedChanges ? styles.btnPrimary : styles.btnSecondary}
+                                                onClick={() => {
+                                                    setSelectedDoc(null);
+                                                    setHasUnsavedChanges(false);
+                                                }}
                                                 style={{ margin: 0, padding: '8px 20px', borderRadius: '8px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                                title="Guarda los cambios y vuelve al inicio"
+                                                title={hasUnsavedChanges ? "Guarda los cambios y vuelve al inicio" : "Cerrar documento"}
                                             >
-                                                Guardar y Cerrar <ArrowLeft size={18} style={{ transform: 'rotate(180deg)' }} />
+                                                {hasUnsavedChanges ? "Guardar y Cerrar *" : "Cerrar"} <ArrowLeft size={18} style={{ transform: 'rotate(180deg)' }} />
                                             </button>
                                         </div>
                                         <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
