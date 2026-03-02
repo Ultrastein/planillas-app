@@ -59,6 +59,7 @@ export function DocumentEditor() {
     const [gdocUrl, setGdocUrl] = useState('');
     const [fileContent, setFileContent] = useState<string | null>(null);
     const [uploadFile, setUploadFile] = useState<File | null>(null);
+    const [pendingChainFromDocId, setPendingChainFromDocId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchDocs();
@@ -188,11 +189,32 @@ export function DocumentEditor() {
 
             await fetchDocs();
             setSelectedDoc(data);
+
+            // If the user was trying to chain a class, link the previous document to this new one
+            if (pendingChainFromDocId) {
+                await handleUpdateNextClass(pendingChainFromDocId, data.id);
+                setPendingChainFromDocId(null);
+            }
         } catch (err: any) {
             alert('Error al guardar documento: ' + err.message);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleCreateNextClassQuickAction = () => {
+        if (!selectedDoc) return;
+        setUploadCategory(selectedDoc.tematica || '');
+        setPendingChainFromDocId(selectedDoc.id);
+
+        let nextNumber = 2;
+        if (selectedDoc.num_clase) {
+            const parsed = parseInt(selectedDoc.num_clase);
+            if (!isNaN(parsed)) nextNumber = parsed + 1;
+        }
+
+        setUploadTitle(`${selectedDoc.title} (Clase ${nextNumber})`);
+        setIsCreating(true);
     };
 
     const handleDelete = async (docId: string) => {
@@ -492,27 +514,22 @@ export function DocumentEditor() {
                     </div>
                 ) : (
                     // DOCUMENT VIEWER VIEW
-                    <div className={styles.viewerArea} style={{ position: 'relative' }}>
-                        {/* GLOBAL CLOSE BUTTON FOR VIEWER */}
-                        <button
-                            className={styles.closeBtn}
-                            onClick={() => setSelectedDoc(null)}
-                            title="Cerrar vista"
-                            style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 50, backgroundColor: '#f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                        >
-                            <X size={20} color="var(--text-secondary)" />
-                        </button>
-
+                    <div className={styles.viewerArea}>
                         {selectedDoc ? (
                             <>
                                 <div className={styles.docRibbon}>
                                     <div style={{ flex: 1, paddingRight: '40px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                            <button className={styles.backBtn} onClick={() => setSelectedDoc(null)} style={{ margin: 0 }}>
-                                                <ArrowLeft size={16} /> Volver al Dashboard
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                            <h2>{selectedDoc.title}</h2>
+                                            <button
+                                                className={styles.btnPrimary}
+                                                onClick={() => setSelectedDoc(null)}
+                                                style={{ margin: 0, padding: '8px 20px', borderRadius: '8px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                title="Guarda los cambios y vuelve al inicio"
+                                            >
+                                                Guardar y Cerrar <ArrowLeft size={18} style={{ transform: 'rotate(180deg)' }} />
                                             </button>
                                         </div>
-                                        <h2>{selectedDoc.title}</h2>
                                         <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
 
                                         <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -556,6 +573,14 @@ export function DocumentEditor() {
                                                         style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                                                     >
                                                         Saltar a Siguiente →
+                                                    </button>
+                                                )}
+                                                {!selectedDoc.next_class_id && canEditSelected && (
+                                                    <button
+                                                        onClick={handleCreateNextClassQuickAction}
+                                                        style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#dbeafe', color: 'var(--primary-hover)', border: '1px solid currentColor', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                    >
+                                                        <Plus size={14} /> Añadir Siguiente Clase
                                                     </button>
                                                 )}
                                             </div>
