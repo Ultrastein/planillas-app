@@ -276,6 +276,24 @@ export function DocumentEditor() {
         }
     };
 
+    const handleEmptyTrash = async () => {
+        const confirmEmpty = window.confirm("¿Estás completamente seguro de vaciar la papelera? Esto eliminará permanentemente todas las planificaciones borradas y no se pueden recuperar.");
+        if (!confirmEmpty) return;
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('documents').delete().eq('status', 'deleted');
+            if (error) throw error;
+            alert("Papelera vaciada correctamente.");
+            // No need to fetchDocs if they only show 'active', but good practice.
+            fetchDocs();
+        } catch (err: any) {
+            alert('Error vaciando la papelera: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleUpdateCategory = async (docId: string, newCategory: string) => {
         try {
             const { error } = await supabase.from('documents').update({ tematica: newCategory || null }).eq('id', docId);
@@ -524,9 +542,16 @@ export function DocumentEditor() {
                                     />
                                 </div>
                                 {canCreateDocument && (
-                                    <button className={styles.btnPrimary} onClick={() => setIsCreating(true)} style={{ padding: '12px 24px', fontSize: '1rem', flexShrink: 0 }}>
-                                        + Nueva Clase
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                                        {user?.role === 'admin' && (
+                                            <button className={styles.btnDanger} onClick={handleEmptyTrash} disabled={loading} style={{ padding: '12px 16px', fontSize: '0.9rem' }} title="Eliminar permanentemente los documentos borrados">
+                                                Vaciar Papelera
+                                            </button>
+                                        )}
+                                        <button className={styles.btnPrimary} onClick={() => setIsCreating(true)} style={{ padding: '12px 24px', fontSize: '1rem' }}>
+                                            + Nueva Clase
+                                        </button>
+                                    </div>
                                 )}
                             </div>
 
@@ -560,17 +585,25 @@ export function DocumentEditor() {
                         <div className={styles.docsGridContainer}>
                             <div className={styles.docsGrid}>
                                 {filteredDocs.map(d => (
-                                    <div key={d.id} className={styles.docCard} onClick={() => setSelectedDoc(d)} style={{ cursor: 'pointer' }}>
+                                    <div key={d.id} className={styles.docCard} onClick={() => setSelectedDoc(d)} style={{ cursor: 'pointer', position: 'relative' }}>
                                         <div className={styles.cardHeader}>
-                                            {d.tematica ? (
-                                                <span className={styles.cardBadge} style={{ backgroundColor: 'var(--primary-color)' }}>
-                                                    {d.tematica}
-                                                </span>
-                                            ) : (
-                                                <span className={styles.cardBadge} style={{ backgroundColor: '#94a3b8' }}>
-                                                    Sin Categorizar
-                                                </span>
-                                            )}
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                {d.tematica ? (
+                                                    <span className={styles.cardBadge} style={{ backgroundColor: 'var(--primary-color)' }}>
+                                                        {d.tematica}
+                                                    </span>
+                                                ) : (
+                                                    <span className={styles.cardBadge} style={{ backgroundColor: '#94a3b8' }}>
+                                                        Sin Categorizar
+                                                    </span>
+                                                )}
+                                                {/* Indicates chained class visually on the card */}
+                                                {(d.next_class_id || d.num_clase) && (
+                                                    <span className={styles.cardBadge} style={{ backgroundColor: '#3b82f6', fontSize: '0.7rem' }}>
+                                                        Clase {d.num_clase || '?'} 🔗
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <h4 className={styles.cardTitle}>{d.title}</h4>
                                         <div className={styles.cardMeta}>
@@ -657,7 +690,6 @@ export function DocumentEditor() {
                                                         style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc', maxWidth: '200px' }}
                                                     >
                                                         <option value="">-- Sin Encadenar --</option>
-                                                        {/* Solo documentos de su misma categoría, distinto al propio seleccionado */}
                                                         {documents
                                                             .filter(d => (d.tematica === selectedDoc.tematica || (!d.tematica && !selectedDoc.tematica)) && d.id !== selectedDoc.id)
                                                             .map(d => <option key={d.id} value={d.id}>{d.title} (Clase n° {d.num_clase || '?'})</option>)
@@ -666,23 +698,46 @@ export function DocumentEditor() {
                                                 ) : (
                                                     <span style={{ fontSize: '0.85rem' }}>{documents.find(d => d.id === selectedDoc.next_class_id)?.title || 'Ninguna'}</span>
                                                 )}
-                                                {selectedDoc.next_class_id && (
-                                                    <button
-                                                        onClick={() => setSelectedDoc(documents.find(d => d.id === selectedDoc.next_class_id))}
-                                                        style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                                                    >
-                                                        Saltar a Siguiente →
-                                                    </button>
-                                                )}
-                                                {!selectedDoc.next_class_id && canEditSelected && (
-                                                    <button
-                                                        onClick={handleCreateNextClassQuickAction}
-                                                        style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#dbeafe', color: 'var(--primary-hover)', border: '1px solid currentColor', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                        title="Crear una nueva clase conectada a esta"
-                                                    >
-                                                        <Plus size={14} /> Añadir Siguiente Clase
-                                                    </button>
-                                                )}
+
+                                                <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
+                                                    {selectedDoc.next_class_id && (
+                                                        <button
+                                                            onClick={() => setSelectedDoc(documents.find(d => d.id === selectedDoc.next_class_id))}
+                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                            title="Ir directamente a la siguiente clase encadenada"
+                                                        >
+                                                            Siguiente Clase &rarr;
+                                                        </button>
+                                                    )}
+                                                    {(selectedDoc.next_class_id || documents.some(d => d.next_class_id === selectedDoc.id)) && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                // Temporarily view only documents in this chain
+                                                                const categoryId = selectedDoc.tematica || 'Sin Categorizar';
+                                                                if (selectedCategory !== categoryId) setSelectedCategory(categoryId);
+
+                                                                // Provide clear visual feedback since it filters via search conceptually
+                                                                // We use the category filter along with a search hint
+                                                                // This is a simplified "view all" by filtering the view to the current category.
+                                                                alert('Viendo todas las clases de la temática: ' + categoryId + '. Vuelve a seleccionar la carpeta "Todas" para quitar el filtro.');
+                                                                setSelectedDoc(null);
+                                                            }}
+                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#e2e8f0', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                            title="Ver todas las clases de esta temática en la cuadrícula"
+                                                        >
+                                                            Ver toda la temática
+                                                        </button>
+                                                    )}
+                                                    {!selectedDoc.next_class_id && canEditSelected && (
+                                                        <button
+                                                            onClick={handleCreateNextClassQuickAction}
+                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#dbeafe', color: 'var(--primary-hover)', border: '1px solid currentColor', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                            title="Crear una nueva clase conectada a esta"
+                                                        >
+                                                            <Plus size={14} /> Añadir Siguiente Clase
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
