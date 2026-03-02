@@ -560,7 +560,7 @@ export function DocumentEditor() {
                         <div className={styles.docsGridContainer}>
                             <div className={styles.docsGrid}>
                                 {filteredDocs.map(d => (
-                                    <div key={d.id} className={styles.docCard}>
+                                    <div key={d.id} className={styles.docCard} onClick={() => setSelectedDoc(d)} style={{ cursor: 'pointer' }}>
                                         <div className={styles.cardHeader}>
                                             {d.tematica ? (
                                                 <span className={styles.cardBadge} style={{ backgroundColor: 'var(--primary-color)' }}>
@@ -578,7 +578,7 @@ export function DocumentEditor() {
                                             {d.curso && <span><strong>Año:</strong> {d.grado} {d.anio}</span>}
                                             {d.carga_horaria && <span><strong>Duración:</strong> {d.carga_horaria}</span>}
                                         </div>
-                                        <div className={styles.cardAction} onClick={() => setSelectedDoc(d)}>
+                                        <div className={styles.cardAction}>
                                             Abrir clase &rarr;
                                         </div>
                                     </div>
