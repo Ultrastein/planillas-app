@@ -257,7 +257,7 @@ export function DocumentEditor() {
     };
 
     const handleDelete = async (docId: string) => {
-        const confirmDelete = window.confirm("¿Seguro que deseas eliminar esta planificación?");
+        const confirmDelete = window.confirm("El archivo será borrado y desaparecerá de la vista. ¿Deseas continuar?");
         if (!confirmDelete) return;
 
         try {
@@ -282,10 +282,31 @@ export function DocumentEditor() {
 
         setLoading(true);
         try {
-            const { error } = await supabase.from('documents').delete().eq('status', 'deleted');
-            if (error) throw error;
-            alert("Papelera vaciada correctamente.");
-            // No need to fetchDocs if they only show 'active', but good practice.
+            // WORKAROUND FOR FOREIGN KEY CONSTRAINT: Delete children via API first
+            // 1. Get all deleted docs
+            const { data: deletedDocs, error: fetchError } = await supabase
+                .from('documents')
+                .select('id')
+                .eq('status', 'deleted');
+
+            if (fetchError) throw fetchError;
+
+            if (deletedDocs && deletedDocs.length > 0) {
+                const deletedIds = deletedDocs.map(d => d.id);
+
+                // 2. Delete all comments & versions for these docs
+                await supabase.from('comments').delete().in('document_id', deletedIds);
+                await supabase.from('document_versions').delete().in('document_id', deletedIds);
+
+                // 3. Finally, delete the actual documents
+                const { error: deleteError } = await supabase.from('documents').delete().in('id', deletedIds);
+                if (deleteError) throw deleteError;
+
+                alert("Papelera vaciada correctamente.");
+            } else {
+                alert("La papelera ya está vacía.");
+            }
+
             fetchDocs();
         } catch (err: any) {
             alert('Error vaciando la papelera: ' + err.message);
