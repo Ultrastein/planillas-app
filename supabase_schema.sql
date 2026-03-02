@@ -129,7 +129,7 @@ create policy "Authors can update their own documents (soft delete)"
 -- 3. Create Comments Table
 CREATE TABLE IF NOT EXISTS public.comments (
   id uuid default gen_random_uuid() primary key,
-  document_id uuid references public.documents(id) not null,
+  document_id uuid references public.documents(id) on delete cascade not null,
   author_id uuid references public.users(id) not null,
   author_name text not null,
   text text not null,
