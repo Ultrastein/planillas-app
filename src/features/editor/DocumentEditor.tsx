@@ -731,6 +731,15 @@ export function DocumentEditor() {
                                                 )}
 
                                                 <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
+                                                    {documents.some(d => d.next_class_id === selectedDoc.id) && (
+                                                        <button
+                                                            onClick={() => setSelectedDoc(documents.find(d => d.next_class_id === selectedDoc.id))}
+                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                            title="Ir a la clase anterior encadenada"
+                                                        >
+                                                            &larr; Clase Anterior
+                                                        </button>
+                                                    )}
                                                     {selectedDoc.next_class_id && (
                                                         <button
                                                             onClick={() => setSelectedDoc(documents.find(d => d.id === selectedDoc.next_class_id))}
