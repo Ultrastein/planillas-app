@@ -144,6 +144,53 @@
     font-size: 0.85rem;
 }
 
+/* Tooltip for Document list hover */
+.liContainer {
+    position: relative;
+    /* Context block para el tooltip absolute */
+}
+
+.docTooltip {
+    position: fixed;
+    /* usar fixed en vez de absolute para saltar el overflow del contenedor padre if needed */
+    left: 280px;
+    background: white;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    width: 280px;
+    z-index: 50;
+    pointer-events: none;
+    animation: fadeIn 0.2s ease;
+}
+
+.docTooltip h5 {
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.docTooltip p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .uploadSection {
     border-top: 1px solid var(--border-color);
     padding-top: 20px;

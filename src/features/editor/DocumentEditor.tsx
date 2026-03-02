@@ -24,12 +24,26 @@ export function DocumentEditor() {
     const [loading, setLoading] = useState(false);
     const [showNewCatInput, setShowNewCatInput] = useState(false);
     const [newCatName, setNewCatName] = useState('');
+    const [hoveredDoc, setHoveredDoc] = useState<any | null>(null);
+    const [mousePosition, setMousePosition] = useState({ top: 0, left: 0 });
 
     // Reset internal filters when category changes
     useEffect(() => {
         setFilterGrado('');
         setFilterHoras('');
     }, [selectedCategory]);
+
+    // Bug Fix: Clear selected doc if it doesn't belong to the newly filtered list
+    useEffect(() => {
+        if (!selectedDoc) return;
+        const matchesCategory = selectedCategory ? (selectedDoc.tematica === selectedCategory || (!selectedDoc.tematica && selectedCategory === 'Sin Categorizar')) : true;
+        const matchesGrado = filterGrado ? selectedDoc.grado === filterGrado : true;
+        const matchesHoras = filterHoras ? selectedDoc.carga_horaria === filterHoras : true;
+
+        if (!(matchesCategory && matchesGrado && matchesHoras)) {
+            setSelectedDoc(null);
+        }
+    }, [selectedCategory, filterGrado, filterHoras, selectedDoc]);
 
     useEffect(() => {
         setSelectedDocId(selectedDoc?.id || null);
@@ -205,6 +219,19 @@ export function DocumentEditor() {
             fetchDocs();
         } catch (err: any) {
             alert('Error al actualizar temática: ' + err.message);
+        }
+    };
+
+    const handleUpdateNextClass = async (docId: string, nextClassId: string | null) => {
+        try {
+            const { error } = await supabase.from('documents').update({ next_class_id: nextClassId || null }).eq('id', docId);
+            if (error) throw error;
+            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, next_class_id: nextClassId || null } : prev);
+            fetchDocs();
+        } catch (err: any) {
+            console.error('Error al guardar siguiente clase:', err);
+            // Ignore strict table schema warnings if the column doesn't exist yet, just notify user
+            alert('Aviso: Asegúrese de que la columna "next_class_id" (tipo UUID) existe en la tabla documents de Supabase. Err: ' + err.message);
         }
     };
 
@@ -396,6 +423,13 @@ export function DocumentEditor() {
                                 <li key={d.id}
                                     className={selectedDoc?.id === d.id ? styles.activeDoc : ''}
                                     onClick={() => setSelectedDoc(d)}
+                                    // Tooltip Logic
+                                    onMouseEnter={(e) => {
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        setMousePosition({ top: rect.top, left: rect.right + 10 });
+                                        setHoveredDoc(d);
+                                    }}
+                                    onMouseLeave={() => setHoveredDoc(null)}
                                 >
                                     <span className={styles.docTitle}>{d.title}</span>
                                     <span className={styles.docMeta}>{d.file_type.toUpperCase()}</span>
@@ -404,6 +438,26 @@ export function DocumentEditor() {
                             {filteredDocs.length === 0 && <li className={styles.emptyLi}>No hay documentos aquí.</li>}
                         </ul>
                     </div>
+
+                    {/* HOVER TOOLTIP PORTAL */}
+                    {hoveredDoc && (
+                        <div
+                            className={styles.docTooltip}
+                            style={{ top: mousePosition.top, left: mousePosition.left }}
+                        >
+                            <h5>{hoveredDoc.title}</h5>
+                            {hoveredDoc.curso ? (
+                                <>
+                                    <p><strong>Curso:</strong> {hoveredDoc.curso} ({hoveredDoc.grado} {hoveredDoc.anio})</p>
+                                    <p><strong>Clase N°:</strong> {hoveredDoc.num_clase} | <strong>Horas:</strong> {hoveredDoc.carga_horaria}</p>
+                                    <p><strong>Temática:</strong> {hoveredDoc.tematica || 'Sin especificar'}</p>
+                                    {hoveredDoc.recursos && <p style={{ marginTop: 8 }}><strong>Recursos:</strong><br />{hoveredDoc.recursos}</p>}
+                                </>
+                            ) : (
+                                <p style={{ fontStyle: 'italic' }}>Este documento aún no ha sido analizado por la IA.</p>
+                            )}
+                        </div>
+                    )}
 
                     {!selectedCategory && canCreateDocument && (
                         <div className={styles.uploadSection}>
@@ -449,20 +503,50 @@ export function DocumentEditor() {
                                     <h2>{selectedDoc.title}</h2>
                                     <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
 
-                                    <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Temática:</span>
-                                        {canEditSelected ? (
-                                            <select
-                                                value={selectedDoc.tematica || ''}
-                                                onChange={(e) => handleUpdateCategory(selectedDoc.id, e.target.value)}
-                                                style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc' }}
-                                            >
-                                                <option value="">-- Sin Categorizar --</option>
-                                                {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                            </select>
-                                        ) : (
-                                            <span className={styles.badge} style={{ margin: 0, backgroundColor: 'var(--text-secondary)' }}>{selectedDoc.tematica || 'Sin Categorizar'}</span>
-                                        )}
+                                    <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Temática:</span>
+                                            {canEditSelected ? (
+                                                <select
+                                                    value={selectedDoc.tematica || ''}
+                                                    onChange={(e) => handleUpdateCategory(selectedDoc.id, e.target.value)}
+                                                    style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc' }}
+                                                >
+                                                    <option value="">-- Sin Categorizar --</option>
+                                                    {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                                </select>
+                                            ) : (
+                                                <span className={styles.badge} style={{ margin: 0, backgroundColor: 'var(--text-secondary)' }}>{selectedDoc.tematica || 'Sin Categorizar'}</span>
+                                            )}
+                                        </div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px' }}>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Clase Siguiente:</span>
+                                            {canEditSelected ? (
+                                                <select
+                                                    value={selectedDoc.next_class_id || ''}
+                                                    onChange={(e) => handleUpdateNextClass(selectedDoc.id, e.target.value)}
+                                                    style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc', maxWidth: '200px' }}
+                                                >
+                                                    <option value="">-- Sin Encadenar --</option>
+                                                    {/* Solo documentos de su misma categoría, distinto al propio seleccionado */}
+                                                    {documents
+                                                        .filter(d => (d.tematica === selectedDoc.tematica || (!d.tematica && !selectedDoc.tematica)) && d.id !== selectedDoc.id)
+                                                        .map(d => <option key={d.id} value={d.id}>{d.title} (Clase n° {d.num_clase || '?'})</option>)
+                                                    }
+                                                </select>
+                                            ) : (
+                                                <span style={{ fontSize: '0.85rem' }}>{documents.find(d => d.id === selectedDoc.next_class_id)?.title || 'Ninguna'}</span>
+                                            )}
+                                            {selectedDoc.next_class_id && (
+                                                <button
+                                                    onClick={() => setSelectedDoc(documents.find(d => d.id === selectedDoc.next_class_id))}
+                                                    style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                                >
+                                                    Saltar a Siguiente →
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {selectedDoc.curso && (
