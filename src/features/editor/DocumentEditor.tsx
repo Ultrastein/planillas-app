@@ -24,8 +24,6 @@ export function DocumentEditor() {
     const [loading, setLoading] = useState(false);
     const [showNewCatInput, setShowNewCatInput] = useState(false);
     const [newCatName, setNewCatName] = useState('');
-    const [hoveredDoc, setHoveredDoc] = useState<any | null>(null);
-    const [mousePosition, setMousePosition] = useState({ top: 0, left: 0 });
 
     // New States for Grid Layout
     const [searchQuery, setSearchQuery] = useState('');
@@ -251,6 +249,16 @@ export function DocumentEditor() {
         }
     };
 
+    const handleUpdateRecursos = async (docId: string, newRecursos: string) => {
+        try {
+            const { error } = await supabase.from('documents').update({ recursos: newRecursos }).eq('id', docId);
+            if (error) throw error;
+            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, recursos: newRecursos } : prev);
+        } catch (err) {
+            console.error('Error updating recursos:', err);
+        }
+    };
+
     const handleAIScan = async () => {
         if (!selectedDoc) return;
         setLoading(true);
@@ -349,7 +357,7 @@ export function DocumentEditor() {
                 <div className={styles.folderRowHeader}>
                     <h3>Carpetas de Planificación</h3>
                     {canCreateDocument && (
-                        <button className={styles.iconBtn} onClick={() => setShowNewCatInput(!showNewCatInput)} title="Nueva Carpeta">
+                        <button className={styles.closeBtn} onClick={() => setShowNewCatInput(!showNewCatInput)} title="Nueva Carpeta">
                             <Plus size={16} />
                         </button>
                     )}
@@ -484,14 +492,26 @@ export function DocumentEditor() {
                     </div>
                 ) : (
                     // DOCUMENT VIEWER VIEW
-                    <div className={styles.viewerArea}>
+                    <div className={styles.viewerArea} style={{ position: 'relative' }}>
+                        {/* GLOBAL CLOSE BUTTON FOR VIEWER */}
+                        <button
+                            className={styles.closeBtn}
+                            onClick={() => setSelectedDoc(null)}
+                            title="Cerrar vista"
+                            style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 50, backgroundColor: '#f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                        >
+                            <X size={20} color="var(--text-secondary)" />
+                        </button>
+
                         {selectedDoc ? (
                             <>
                                 <div className={styles.docRibbon}>
-                                    <div style={{ flex: 1 }}>
-                                        <button className={styles.backBtn} onClick={() => setSelectedDoc(null)}>
-                                            <ArrowLeft size={16} /> Volver a la Lista
-                                        </button>
+                                    <div style={{ flex: 1, paddingRight: '40px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <button className={styles.backBtn} onClick={() => setSelectedDoc(null)} style={{ margin: 0 }}>
+                                                <ArrowLeft size={16} /> Volver al Dashboard
+                                            </button>
+                                        </div>
                                         <h2>{selectedDoc.title}</h2>
                                         <p><strong>Autor:</strong> {selectedDoc.author_name} | <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
 
@@ -547,7 +567,26 @@ export function DocumentEditor() {
                                                 <span className={styles.badge}>Grado: {selectedDoc.grado} {selectedDoc.anio}</span>
                                                 <span className={styles.badge}>Clase N°: {selectedDoc.num_clase}</span>
                                                 <p style={{ marginTop: 8, fontSize: '0.85rem' }}><strong>Carga Horaria:</strong> {selectedDoc.carga_horaria}</p>
-                                                <p style={{ fontSize: '0.85rem' }}><strong>Materiales Sugeridos:</strong> {selectedDoc.recursos}</p>
+
+                                                <div style={{ marginTop: 8 }}>
+                                                    <p style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '4px' }}>Materiales y Recursos Sugeridos:</p>
+                                                    {canEditSelected ? (
+                                                        <textarea
+                                                            value={selectedDoc.recursos || ''}
+                                                            onChange={(e) => {
+                                                                // Optimistic UI Update Let's not hit DB on every keystroke, handle blur instead
+                                                                setSelectedDoc({ ...selectedDoc, recursos: e.target.value });
+                                                            }}
+                                                            onBlur={(e) => handleUpdateRecursos(selectedDoc.id, e.target.value)}
+                                                            style={{ width: '100%', minHeight: '60px', padding: '8px', fontSize: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', backgroundColor: '#fff', resize: 'vertical' }}
+                                                            placeholder="Escribe aquí los recursos necesarios..."
+                                                        />
+                                                    ) : (
+                                                        <p style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', backgroundColor: '#fff', padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                                                            {selectedDoc.recursos || 'No hay recursos especificados.'}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
