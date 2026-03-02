@@ -1,0 +1,84 @@
+:root {
+  /* High-Contrast Professional TecnoKids Theme */
+  --bg-primary: #f8fafc;
+  /* Crisp light gray for workspace */
+  --bg-secondary: #ffffff;
+  /* Pure white for cards */
+  --bg-sidebar: #0f172a;
+  /* Deep slate/navy for sidebar */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-light: #f8fafc;
+  /* Text on dark backgrounds */
+  --text-muted: #94a3b8;
+
+  --border-color: #e2e8f0;
+  /* Crisp borders */
+  --border-sidebar: #f1f5f9;
+
+  --primary-color: #39B0C4;
+  /* TecnoKids Cyan */
+  --primary-hover: #2dbad1;
+  --primary-light: rgba(57, 176, 196, 0.15);
+
+  --danger-color: #f43f5e;
+  --success-color: #10b981;
+
+  --sidebar-width: 240px;
+  /* Slightly wider, relaxed */
+  --right-panel-width: 320px;
+
+  /* Modern Professional Font (keeping Outfit for brand consistency but can use weights) */
+  --font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+
+  /* Amigables, bubbly rounded corners */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  /* Softer, deeper shadows for that floating glass feel */
+  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 14px;
+  /* Fix zoom by reducing base scale */
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  /* Prevent horizontal scroll, strictly desktop */
+}
+
+input,
+button,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}

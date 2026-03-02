@@ -1,0 +1,297 @@
+.layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: #ffffff;
+    /* Brighter sidebar for kids style */
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-color);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
+    z-index: 20;
+}
+
+.brand {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.logoImage {
+    max-width: 180px;
+    height: auto;
+    object-fit: contain;
+}
+
+.brand h1 {
+    font-size: 1.35rem;
+    /* Slightly larger */
+    font-weight: 700;
+    /* Bolder for Outfit font */
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.badge {
+    background: var(--primary-color);
+    color: white;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: var(--radius-lg);
+    /* Very rounded pill shape */
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: var(--shadow-sm);
+}
+
+.navTree {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.navSection h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.navSection ul {
+    list-style: none;
+    padding-left: 12px;
+    border-left: 2px solid var(--border-color);
+    /* Thicker softer border */
+}
+
+.navSection li {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    transition: var(--transition-smooth);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.navSection li:hover {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    transform: translateX(6px);
+}
+
+.userProfile {
+    padding: 16px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: #fafafa;
+}
+
+.userInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.userName {
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.userRole {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.iconBtn {
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: 50%;
+    /* Fully round circle buttons */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background-color: transparent;
+}
+
+.iconBtn:hover {
+    background-color: var(--border-color);
+    color: var(--primary-color);
+    transform: scale(1.1);
+    /* Pop effect */
+}
+
+/* CENTRAL AREA */
+.mainContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8fafc;
+    min-width: 0;
+    z-index: 10;
+}
+
+.topbar {
+    height: 64px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    background-color: #ffffff;
+}
+
+.documentMeta h2 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.headerProfile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 16px;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    /* Pill shape for header */
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-smooth);
+    cursor: pointer;
+}
+
+.headerProfile:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--primary-color);
+}
+
+.userInfoHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    /* Align text to right in header */
+}
+
+.userNameHeader {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.userRoleHeader {
+    font-size: 0.70rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.iconBtnHeader {
+    color: var(--text-secondary);
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background-color: transparent;
+}
+
+.iconBtnHeader:hover {
+    background-color: var(--border-color);
+    color: var(--primary-color);
+}
+
+.btnPrimary {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: var(--transition-smooth);
+    box-shadow: 0 4px 10px rgba(57, 176, 196, 0.3);
+}
+
+.btnPrimary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(57, 176, 196, 0.4);
+}
+
+.editorArea {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+}
+
+/* RIGHT PANEL */
+.rightPanel {
+    width: var(--right-panel-width);
+    background-color: #f8fafc;
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.panelHeader {
+    height: 64px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    background-color: #ffffff;
+}
+
+.panelHeader h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.panelContent {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.placeholderBox {
+    border: 1px dashed #cbd5e1;
+    border-radius: var(--radius-md);
+    padding: 20px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.85rem;
+}
