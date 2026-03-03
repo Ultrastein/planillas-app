@@ -42,7 +42,7 @@ export function DocumentEditor() {
     useEffect(() => {
         if (!selectedDoc) return;
         const matchesCategory = selectedCategory ? (selectedDoc.tematica === selectedCategory || (!selectedDoc.tematica && selectedCategory === 'Sin Categorizar')) : true;
-        const matchesGrado = filterGrado ? selectedDoc.grado === filterGrado : true;
+        const matchesGrado = filterGrado ? selectedDoc.grado?.split(',').map((s: string) => s.trim()).includes(filterGrado) : true;
         const matchesHoras = filterHoras ? selectedDoc.carga_horaria === filterHoras : true;
 
         if (!(matchesCategory && matchesGrado && matchesHoras)) {
