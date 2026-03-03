@@ -552,7 +552,7 @@ export function DocumentEditor() {
 
     const filteredDocs = documents.filter(d => {
         const matchesCategory = selectedCategory ? (d.tematica === selectedCategory || (!d.tematica && selectedCategory === 'Sin Categorizar')) : true;
-        const matchesGrado = filterGrado ? d.grado === filterGrado : true;
+        const matchesGrado = filterGrado ? d.grado?.split(',').map(s => s.trim()).includes(filterGrado) : true;
         const matchesHoras = filterHoras ? d.carga_horaria === filterHoras : true;
         const matchesSearch = searchQuery ?
             (d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -581,7 +581,8 @@ export function DocumentEditor() {
         ? documents.filter(d => d.tematica === selectedCategory || (!d.tematica && selectedCategory === 'Sin Categorizar'))
         : documents;
 
-    const uniqueGrados = Array.from(new Set(categoryDocs.map(d => d.grado).filter(Boolean)));
+    const uniqueGradosRaw = categoryDocs.flatMap(d => d.grado ? d.grado.split(',').map(s => s.trim()) : []);
+    const uniqueGrados = Array.from(new Set(uniqueGradosRaw.filter(Boolean)));
     const uniqueHoras = Array.from(new Set(categoryDocs.map(d => d.carga_horaria).filter(Boolean)));
 
     return (
@@ -911,8 +912,9 @@ export function DocumentEditor() {
                                                                 value={selectedDoc.grado || ''}
                                                                 onChange={(e) => setSelectedDoc({ ...selectedDoc, grado: e.target.value })}
                                                                 onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'grado', e.target.value)}
-                                                                style={{ width: '60px', padding: '2px 4px', fontSize: 'inherit', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
-                                                                placeholder="Grado"
+                                                                style={{ width: '140px', padding: '2px 4px', fontSize: 'inherit', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
+                                                                placeholder="Ej: 1ro, 2do"
+                                                                title="Puedes ingresar varios grados separados por coma"
                                                             />
                                                             <input
                                                                 type="text"
