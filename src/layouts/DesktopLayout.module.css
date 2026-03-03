@@ -152,6 +152,7 @@
     flex-direction: column;
     background-color: #f8fafc;
     min-width: 0;
+    min-height: 0;
     z-index: 10;
 }
 
@@ -251,9 +252,9 @@
 
 .editorArea {
     flex: 1;
-    padding: 40px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    min-height: 0;
 }
 
 /* RIGHT PANEL */
