@@ -8,6 +8,7 @@ import { RichTextEditor } from './RichTextEditor';
 import styles from './DocumentEditor.module.css';
 import * as mammoth from 'mammoth';
 import { Folder, FolderOpen, Plus, FileText, Search, X, ArrowLeft } from 'lucide-react';
+import React from 'react';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
@@ -610,7 +611,16 @@ export function DocumentEditor() {
                     </div>
                 )}
 
-                <div className={styles.foldersContainer}>
+                <div
+                    className={styles.foldersContainer}
+                    onWheel={(e) => {
+                        const container = e.currentTarget;
+                        if (e.deltaY !== 0) {
+                            e.preventDefault();
+                            container.scrollLeft += e.deltaY;
+                        }
+                    }}
+                >
                     <div
                         className={`${styles.folderChip} ${selectedCategory === null ? styles.activeFolderChip : ''}`}
                         onClick={() => setSelectedCategory(null)}
