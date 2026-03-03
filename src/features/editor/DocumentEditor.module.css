@@ -90,7 +90,7 @@
 .lowerWorkspace {
     display: flex;
     flex: 1;
-    overflow-y: auto;
+    min-height: 0;
     background-color: #f8fafc;
     /* Fondo gris muy claro para el grid */
     flex-direction: column;
