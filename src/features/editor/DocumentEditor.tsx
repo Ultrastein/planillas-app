@@ -624,7 +624,7 @@ export function DocumentEditor() {
                 >
                     <div
                         className={`${styles.folderChip} ${selectedCategory === null ? styles.activeFolderChip : ''}`}
-                        onClick={() => setSelectedCategory(null)}
+                        onClick={() => { setSelectedCategory(null); setFilterGrado(''); setFilterHoras(''); }}
                     >
                         {selectedCategory === null ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
                         <span>Todas</span>
@@ -633,7 +633,7 @@ export function DocumentEditor() {
                         <div
                             key={cat.id}
                             className={`${styles.folderChip} ${selectedCategory === cat.name ? styles.activeFolderChip : ''}`}
-                            onClick={() => setSelectedCategory(cat.name)}
+                            onClick={() => { setSelectedCategory(cat.name); setFilterGrado(''); setFilterHoras(''); }}
                         >
                             {selectedCategory === cat.name ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
                             <span>{cat.name}</span>
@@ -641,7 +641,7 @@ export function DocumentEditor() {
                     ))}
                     <div
                         className={`${styles.folderChip} ${selectedCategory === 'Sin Categorizar' ? styles.activeFolderChip : ''}`}
-                        onClick={() => setSelectedCategory('Sin Categorizar')}
+                        onClick={() => { setSelectedCategory('Sin Categorizar'); setFilterGrado(''); setFilterHoras(''); }}
                     >
                         {selectedCategory === 'Sin Categorizar' ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
                         <span style={{ fontStyle: 'italic', color: '#64748b' }}>Sin Categorizar</span>
