@@ -7,7 +7,7 @@ import { useCategoryStore } from '../../store/useCategoryStore';
 import { RichTextEditor } from './RichTextEditor';
 import styles from './DocumentEditor.module.css';
 import * as mammoth from 'mammoth';
-import { Folder, FolderOpen, Plus, FileText, Search, X, ArrowLeft } from 'lucide-react';
+import { Folder, FolderOpen, Plus, FileText, Search, X, ArrowLeft, Maximize2, Minimize2, Copy, Check } from 'lucide-react';
 import React from 'react';
 
 export function DocumentEditor() {
@@ -69,6 +69,8 @@ export function DocumentEditor() {
     const [comments, setComments] = useState<any[]>([]);
     const [newCommentText, setNewCommentText] = useState('');
     const [showComments, setShowComments] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [copiedLink, setCopiedLink] = useState(false);
 
     useEffect(() => {
         fetchDocs();
@@ -754,7 +756,7 @@ export function DocumentEditor() {
                     </div>
                 ) : (
                     // DOCUMENT VIEWER VIEW
-                    <div className={styles.viewerArea}>
+                    <div className={styles.viewerArea} style={isExpanded ? { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 9999, margin: 0, borderRadius: 0 } : {}}>
                         {selectedDoc ? (
                             <>
                                 <div className={styles.docRibbon}>
@@ -987,6 +989,28 @@ export function DocumentEditor() {
                                         )}
                                     </div>
                                     <div className={styles.ribbonActions}>
+                                        {selectedDoc.file_url && (
+                                            <button
+                                                className={styles.btnSecondary}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(selectedDoc.file_url);
+                                                    setCopiedLink(true);
+                                                    setTimeout(() => setCopiedLink(false), 2000);
+                                                }}
+                                                title="Copiar enlace del documento"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                            >
+                                                {copiedLink ? <><Check size={16} color="green" /> Copiado</> : <><Copy size={16} /> Copiar Enlace</>}
+                                            </button>
+                                        )}
+                                        <button
+                                            className={styles.btnSecondary}
+                                            onClick={() => setIsExpanded(!isExpanded)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                            title={isExpanded ? "Restaurar tamaño" : "Expandir a pantalla completa"}
+                                        >
+                                            {isExpanded ? <><Minimize2 size={16} /> Contraer</> : <><Maximize2 size={16} /> Expandir</>}
+                                        </button>
                                         {canEditSelected && (
                                             <>
                                                 {selectedDoc.file_type === 'editor' && (
