@@ -68,6 +68,7 @@ export function DocumentEditor() {
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [comments, setComments] = useState<any[]>([]);
     const [newCommentText, setNewCommentText] = useState('');
+    const [showComments, setShowComments] = useState(false);
 
     useEffect(() => {
         fetchDocs();
@@ -1031,40 +1032,56 @@ export function DocumentEditor() {
                                     )}
                                 </div>
 
-                                {/* COMMENTS SECTION */}
+                                {/* COMMENTS SECTION TOGGLE */}
                                 <div className={styles.commentsContainer}>
-                                    <h4 style={{ marginBottom: '16px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Comentarios y Sugerencias</h4>
-                                    <div className={styles.commentsList}>
-                                        {comments.length === 0 ? (
-                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Aún no hay comentarios. Sé el primero en opinar.</p>
-                                        ) : (
-                                            comments.map(comment => (
-                                                <div key={comment.id} className={styles.commentItem}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                        <strong>{comment.author_name}</strong>
-                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(comment.created_at).toLocaleString()}</span>
-                                                    </div>
-                                                    <p style={{ margin: 0, fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{comment.text}</p>
-                                                </div>
-                                            ))
-                                        )}
+                                    <div
+                                        className={styles.commentsHeader}
+                                        onClick={() => setShowComments(!showComments)}
+                                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '12px 16px', background: 'var(--primary-light)', borderRadius: 'var(--radius-sm)' }}
+                                    >
+                                        <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--primary-color)' }}>
+                                            💬 Comentarios y Sugerencias ({comments.length})
+                                        </h4>
+                                        <span style={{ fontSize: '1.2rem', color: 'var(--primary-color)', transform: showComments ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
+                                            ▼
+                                        </span>
                                     </div>
-                                    <div className={styles.addCommentBox}>
-                                        <textarea
-                                            value={newCommentText}
-                                            onChange={(e) => setNewCommentText(e.target.value)}
-                                            placeholder="Escribe un comentario o sugerencia sobre esta clase..."
-                                            style={{ width: '100%', minHeight: '60px', padding: '10px', fontSize: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', resize: 'vertical' }}
-                                        />
-                                        <button
-                                            className={styles.btnPrimary}
-                                            style={{ alignSelf: 'flex-end', marginTop: '8px' }}
-                                            onClick={handleAddComment}
-                                            disabled={!newCommentText.trim()}
-                                        >
-                                            Publicar Comentario
-                                        </button>
-                                    </div>
+
+                                    {showComments && (
+                                        <div className={styles.commentsContent} style={{ paddingTop: '16px' }}>
+                                            <div className={styles.commentsList}>
+                                                {comments.length === 0 ? (
+                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Aún no hay comentarios. Sé el primero en opinar.</p>
+                                                ) : (
+                                                    comments.map(comment => (
+                                                        <div key={comment.id} className={styles.commentItem}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                                <strong>{comment.author_name}</strong>
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(comment.created_at).toLocaleString()}</span>
+                                                            </div>
+                                                            <p style={{ margin: 0, fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{comment.text}</p>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                            <div className={styles.addCommentBox}>
+                                                <textarea
+                                                    value={newCommentText}
+                                                    onChange={(e) => setNewCommentText(e.target.value)}
+                                                    placeholder="Escribe un comentario o sugerencia sobre esta clase..."
+                                                    style={{ width: '100%', minHeight: '60px', padding: '10px', fontSize: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', resize: 'vertical' }}
+                                                />
+                                                <button
+                                                    className={styles.btnPrimary}
+                                                    style={{ alignSelf: 'flex-end', marginTop: '8px' }}
+                                                    onClick={handleAddComment}
+                                                    disabled={!newCommentText.trim()}
+                                                >
+                                                    Publicar Comentario
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </>
                         ) : (
