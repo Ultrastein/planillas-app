@@ -1013,7 +1013,12 @@ export function DocumentEditor() {
                                         </div>
                                     )}
                                     {selectedDoc.file_type === 'gdoc' && selectedDoc.file_url && (
-                                        <iframe src={selectedDoc.file_url} width="100%" height="100%" title="GDoc Prev" />
+                                        <iframe
+                                            src={selectedDoc.file_url.includes('/edit') ? selectedDoc.file_url.replace(/\/edit.*$/, '/preview') : selectedDoc.file_url}
+                                            width="100%"
+                                            height="100%"
+                                            title="GDoc Prev"
+                                        />
                                     )}
                                     {selectedDoc.file_type === 'editor' && (
                                         <div className={styles.editorWrapper}>
