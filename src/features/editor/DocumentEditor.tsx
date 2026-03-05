@@ -756,7 +756,7 @@ export function DocumentEditor() {
                     </div>
                 ) : (
                     // DOCUMENT VIEWER VIEW
-                    <div className={styles.viewerArea} style={isExpanded ? { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 9999, margin: 0, borderRadius: 0 } : {}}>
+                    <div className={styles.viewerArea}>
                         {selectedDoc ? (
                             <>
                                 <div className={styles.docRibbon}>
@@ -1018,9 +1018,6 @@ export function DocumentEditor() {
                                                         Guardar Versión
                                                     </button>
                                                 )}
-                                                <button className={styles.btnSecondary} onClick={handleAIScan} disabled={loading}>
-                                                    {loading ? 'Analizando...' : 'Analizar con IA'}
-                                                </button>
                                                 <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
                                             </>
                                         )}
@@ -1056,8 +1053,20 @@ export function DocumentEditor() {
                                     )}
                                 </div>
 
-                                {/* COMMENTS SECTION TOGGLE */}
+                                {/* COMMENTS SECTION TOGGLE & AI ACTIONS*/}
                                 <div className={styles.commentsContainer}>
+                                    {canEditSelected && (
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                                            <button
+                                                className={styles.btnSecondary}
+                                                onClick={handleAIScan}
+                                                disabled={loading}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--primary-color)', color: 'white', border: 'none' }}
+                                            >
+                                                ✨ {loading ? 'Analizando documento...' : 'Analizar con IA'}
+                                            </button>
+                                        </div>
+                                    )}
                                     <div
                                         className={styles.commentsHeader}
                                         onClick={() => setShowComments(!showComments)}
