@@ -167,7 +167,10 @@ export function DocumentEditor() {
             if (fetchDocsError) throw fetchDocsError;
 
             // Check if title already exists
-            const duplicateByTitle = existingDocs?.find(doc => doc.title.trim().toLowerCase() === uploadTitle.trim().toLowerCase());
+            const duplicateByTitle = existingDocs?.find(doc =>
+                doc.title.trim().toLowerCase() === uploadTitle.trim().toLowerCase() &&
+                (doc.num_clase || '') === (creationNumClase || '')
+            );
             if (duplicateByTitle) {
                 setLoading(false);
                 setIsCreating(false);
@@ -231,7 +234,7 @@ export function DocumentEditor() {
 
             if (creationNumClase) {
                 // Determine if we need to shift other classes for the newly inserted document
-                await handleClassNumberShift(data.id, uploadCategory, creationNumClase);
+                await handleClassNumberShift(data.id, uploadCategory, uploadTitle, creationNumClase);
             }
 
             setUploadTitle('');
@@ -361,13 +364,14 @@ export function DocumentEditor() {
     };
 
     // Helper function for reusable shift logic (used in edit and create)
-    const handleClassNumberShift = async (docIdToIgnore: string, tematica: string | null, newNumStr: string) => {
+    const handleClassNumberShift = async (docIdToIgnore: string, tematica: string | null, ramaTitle: string, newNumStr: string) => {
         const parsedNewNum = parseFloat(newNumStr.replace(',', '.'));
         if (isNaN(parsedNewNum)) return;
 
         // Comprobamos si la nueva clase ocupará el número de una existente
         const existingSameNum = documents.find(d =>
             d.tematica === tematica &&
+            d.title.trim().toLowerCase() === ramaTitle.trim().toLowerCase() &&
             d.id !== docIdToIgnore &&
             parseFloat(d.num_clase?.replace(',', '.') || 'NaN') === parsedNewNum
         );
@@ -378,6 +382,7 @@ export function DocumentEditor() {
                 // Obtener todas las clases mayores o iguales
                 const docsToShift = documents.filter(d =>
                     d.tematica === tematica &&
+                    d.title.trim().toLowerCase() === ramaTitle.trim().toLowerCase() &&
                     d.id !== docIdToIgnore &&
                     parseFloat(d.num_clase?.replace(',', '.') || 'NaN') >= parsedNewNum
                 );
@@ -405,8 +410,9 @@ export function DocumentEditor() {
             if (!isNaN(parsedNewNum)) {
                 const docToUpdate = documents.find(d => d.id === docId);
                 const tematica = docToUpdate?.tematica || null;
+                const ramaTitle = docToUpdate?.title || '';
 
-                await handleClassNumberShift(docId, tematica, newNum);
+                await handleClassNumberShift(docId, tematica, ramaTitle, newNum);
             }
 
             const { error } = await supabase.from('documents').update({ num_clase: newNum || null }).eq('id', docId);
