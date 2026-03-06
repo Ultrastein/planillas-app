@@ -58,6 +58,7 @@ export function DocumentEditor() {
     const [uploadType, setUploadType] = useState<'pdf' | 'word' | 'gdoc' | 'editor'>('editor');
     const [uploadTitle, setUploadTitle] = useState('');
     const [uploadCategory, setUploadCategory] = useState('');
+    const [uploadTags, setUploadTags] = useState(''); // New state for Tags
     const [gdocUrl, setGdocUrl] = useState('');
     const [fileContent, setFileContent] = useState<string | null>(null);
     const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -217,6 +218,7 @@ export function DocumentEditor() {
                 content: content,
                 tematica: uploadCategory || null,
                 num_clase: creationNumClase || null, // Guardar el número de clase inicial
+                etiquetas: uploadTags || null, // Guardar las etiquetas insertadas
                 status: 'active'
             };
 
@@ -230,6 +232,7 @@ export function DocumentEditor() {
 
             setUploadTitle('');
             setUploadCategory('');
+            setUploadTags(''); // Cleanup tags
             setCreationNumClase(''); // Cleanup
             setFileContent(null);
             setUploadFile(null);
@@ -443,6 +446,17 @@ export function DocumentEditor() {
             setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error updating recursos:', err);
+        }
+    };
+
+    const handleUpdateEtiquetas = async (docId: string, newEtiquetas: string) => {
+        try {
+            const { error } = await supabase.from('documents').update({ etiquetas: newEtiquetas }).eq('id', docId);
+            if (error) throw error;
+            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, etiquetas: newEtiquetas } : prev);
+            setHasUnsavedChanges(true);
+        } catch (err) {
+            console.error('Error updating etiquetas:', err);
         }
     };
 
@@ -734,6 +748,16 @@ export function DocumentEditor() {
                                                     </span>
                                                 )}
                                             </div>
+                                            {/* Tag badges */}
+                                            {d.etiquetas && (
+                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+                                                    {d.etiquetas.split(',').map((tag: string, i: number) => (
+                                                        <span key={i} style={{ backgroundColor: '#e2e8f0', padding: '2px 6px', borderRadius: '12px', fontSize: '0.7rem', color: '#475569' }}>
+                                                            #{tag.trim()}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         <h4 className={styles.cardTitle}>{d.title}</h4>
                                         <div className={styles.cardMeta}>
@@ -985,6 +1009,29 @@ export function DocumentEditor() {
                                                         </p>
                                                     )}
                                                 </div>
+
+                                                <div style={{ marginTop: 12 }}>
+                                                    <p style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '4px' }}>Etiquetas (Separadas por comas):</p>
+                                                    {canEditSelected ? (
+                                                        <input
+                                                            type="text"
+                                                            value={selectedDoc.etiquetas || ''}
+                                                            onChange={(e) => setSelectedDoc({ ...selectedDoc, etiquetas: e.target.value })}
+                                                            onBlur={(e) => handleUpdateEtiquetas(selectedDoc.id, e.target.value)}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                            style={{ width: '100%', padding: '6px 8px', fontSize: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}
+                                                            placeholder="Ej: examen, lectura, grupal..."
+                                                        />
+                                                    ) : (
+                                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                            {selectedDoc.etiquetas ? selectedDoc.etiquetas.split(',').map((tag: string, i: number) => (
+                                                                <span key={i} style={{ backgroundColor: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', color: '#475569' }}>
+                                                                    #{tag.trim()}
+                                                                </span>
+                                                            )) : <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic' }}>Sin etiquetas</span>}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -1176,6 +1223,14 @@ export function DocumentEditor() {
                                     style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%' }}
                                 />
                             </div>
+
+                            <input
+                                type="text"
+                                placeholder="Etiquetas (opcional, separadas por coma)"
+                                value={uploadTags}
+                                onChange={e => setUploadTags(e.target.value)}
+                                style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%', marginBottom: '12px' }}
+                            />
 
                             {(uploadType === 'word' || uploadType === 'pdf') && (
                                 <input type="file" accept={uploadType === 'word' ? ".docx" : ".pdf"} onChange={handleFileUploadChange} style={{ marginBottom: '12px', width: '100%' }} />
