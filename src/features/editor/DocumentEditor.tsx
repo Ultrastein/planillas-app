@@ -488,7 +488,7 @@ export function DocumentEditor() {
 
         try {
             // Utilizamos el servicio AI para simular el análisis del texto
-            const aiDataResponse = await import('../ai/aiService').then(m => m.analyzeDocumentContent(selectedDoc.content || ''));
+            const aiDataResponse = await import('../ai/aiService').then(m => m.analyzeDocumentContent(selectedDoc.content || '', selectedDoc.title || ''));
             const metadata = aiDataResponse.metadata;
             const requirements = aiDataResponse.requirements;
 
@@ -756,7 +756,7 @@ export function DocumentEditor() {
                     </div>
                 ) : (
                     // DOCUMENT VIEWER VIEW
-                    <div className={styles.viewerArea}>
+                    <div className={styles.viewerArea} style={{ position: 'relative' }}>
                         {selectedDoc ? (
                             <>
                                 <div className={styles.docRibbon}>
@@ -1024,7 +1024,16 @@ export function DocumentEditor() {
                                     </div>
                                 </div>
 
-                                <div className={styles.previewContainer}>
+                                <div className={styles.previewContainer} style={isExpanded ? { position: 'absolute', inset: 0, zIndex: 50, backgroundColor: 'white' } : {}}>
+                                    {isExpanded && (
+                                        <button
+                                            onClick={() => setIsExpanded(false)}
+                                            style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 60, padding: '8px 12px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: 'var(--shadow-md)' }}
+                                            title="Contraer"
+                                        >
+                                            <Minimize2 size={16} /> Contraer
+                                        </button>
+                                    )}
                                     {selectedDoc.file_type === 'pdf' && selectedDoc.file_url && (
                                         <iframe src={selectedDoc.file_url} width="100%" height="100%" title="PDF Prev" />
                                     )}
