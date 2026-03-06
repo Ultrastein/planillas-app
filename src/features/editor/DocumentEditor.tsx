@@ -161,30 +161,34 @@ export function DocumentEditor() {
             // Fetch all active documents for duplicate comparison
             const { data: existingDocs, error: fetchDocsError } = await supabase
                 .from('documents')
-                .select('title, content')
+                .select('*') // Changed to select all so we can load the full doc
                 .eq('status', 'active');
 
             if (fetchDocsError) throw fetchDocsError;
 
             // Check if title already exists
-            const isDuplicateTitle = existingDocs?.some(doc => doc.title.trim().toLowerCase() === uploadTitle.trim().toLowerCase());
-            if (isDuplicateTitle) {
+            const duplicateByTitle = existingDocs?.find(doc => doc.title.trim().toLowerCase() === uploadTitle.trim().toLowerCase());
+            if (duplicateByTitle) {
                 setLoading(false);
-                return alert('Ya existe un documento con este título. Por favor, elige un título diferente.');
+                setIsCreating(false);
+                setSelectedDoc(duplicateByTitle);
+                return alert('Ya existe un documento con este título. Te hemos redirigido a la planilla existente.');
             }
 
             // Check if content already exists (only for text-based uploads where content is extracted or typed)
             if (content && content.trim() !== '') {
-                const isDuplicateContent = existingDocs?.some(doc => {
+                const duplicateByContent = existingDocs?.find(doc => {
                     // Solo comparar si el documento existente tiene contenido
                     if (!doc.content) return false;
                     // Comparar de forma básica (se podría mejorar ignorando espacios o saltos de línea)
                     return doc.content.trim() === content?.trim();
                 });
 
-                if (isDuplicateContent) {
+                if (duplicateByContent) {
                     setLoading(false);
-                    return alert('Ya existe un documento con este mismo contenido. No se ha guardado el duplicado.');
+                    setIsCreating(false);
+                    setSelectedDoc(duplicateByContent);
+                    return alert('Ya existe un documento con este mismo contenido. Te hemos redirigido a la planilla existente.');
                 }
             }
             // --- Duplicate Check End ---

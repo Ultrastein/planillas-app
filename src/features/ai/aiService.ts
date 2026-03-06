@@ -1,4 +1,4 @@
-// Simulated AI service for extracting metadata and technical requirements from Rich Text
+import { GoogleGenAI } from '@google/genai';
 
 export interface AIMetadata {
     subject: string;
@@ -15,85 +15,132 @@ export interface AITechnicalRequirements {
     ppe: string[]; // Personal Protective Equipment
 }
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const getGeminiClient = () => {
+    // In Vite, environment variables are prefixed with VITE_
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+        console.warn("VITE_GEMINI_API_KEY no está configurada. La IA no funcionará correctamente.");
+        return null;
+    }
+    return new GoogleGenAI({ apiKey: apiKey });
+};
 
 export const analyzeDocumentContent = async (htmlContent: string, title: string = ''): Promise<{
     metadata: AIMetadata;
     requirements: AITechnicalRequirements;
 }> => {
-    // Simulate API delay
-    await sleep(1500);
 
-    const textContent = (title + ' ' + htmlContent).replace(/<[^>]+>/g, ' ').toLowerCase();
+    const ai = getGeminiClient();
 
-    // Category Detection (New Feature)
-    let detectedCategory = 'No clasificado';
-    if (textContent.includes('manualidad') || textContent.includes('arte') || textContent.includes('pintura')) {
-        detectedCategory = 'Manualidades';
-    } else if (textContent.includes('proyecto') || textContent.includes('institucional')) {
-        detectedCategory = 'Proyecto Institucional';
-    } else if (textContent.includes('programación') || textContent.includes('programacion') || textContent.includes('robot') || textContent.includes('robótica')) {
-        detectedCategory = 'Programación y Robótica';
-    } else if (textContent.includes('ciudadanía') || textContent.includes('ciudadania') || textContent.includes('redes') || textContent.includes('internet')) {
-        detectedCategory = 'Ciudadanía Digital';
-    } else if (textContent.includes('cuidado') || textContent.includes('seguridad') || textContent.includes('privacidad')) {
-        detectedCategory = 'Cuidado Digital';
-    } else if (textContent.includes('alfabetización') || textContent.includes('alfabetizacion') || textContent.includes('lectura') || textContent.includes('escribir')) {
-        detectedCategory = 'Alfabetización';
-    }
-
-    const metadata: AIMetadata = {
-        subject: textContent.includes('electricidad') ? 'Taller de Electricidad' : 'Tema General',
-        course: textContent.includes('2do') ? '2do B' : '1er A',
-        year: '2026',
-        hourlyLoad: textContent.includes('hora') ? '4 Módulos' : '2 Módulos',
-        classNumber: textContent.includes('clase 1') ? '1' : '1',
-        category: detectedCategory
-    };
-
-    const requirements: AITechnicalRequirements = {
-        tools: [],
-        materials: [],
-        ppe: []
-    };
-
-    // Tools detection
-    if (textContent.includes('pinza') || textContent.includes('alicate')) {
-        requirements.tools.push('Pinzas de electricista', 'Alicates', 'Destornillador Phillips');
-    }
-    if (textContent.includes('multímetro') || textContent.includes('tester')) {
-        requirements.tools.push('Multímetro Digital');
-    }
-    if (textContent.includes('computadora') || textContent.includes('pc')) {
-        requirements.tools.push('Computadora / Notebook');
-    }
-    if (textContent.includes('robot') || textContent.includes('arduino')) {
-        requirements.tools.push('Placa de Desarrollo', 'Sensores');
+    // Fallback if no API key is present (Safety measure)
+    if (!ai) {
+        return {
+            metadata: {
+                subject: 'Falta configurar API Key',
+                course: 'Sin Curso',
+                year: new Date().getFullYear().toString(),
+                hourlyLoad: 'Sin Asignar',
+                classNumber: '1',
+                category: 'Sin Categorizar'
+            },
+            requirements: {
+                tools: ['Necesitas añadir VITE_GEMINI_API_KEY en .env'],
+                materials: ['Falta API Key'],
+                ppe: ['Falta API Key']
+            }
+        }
     }
 
-    // Materials detection
-    if (textContent.includes('cable') || textContent.includes('cobre')) {
-        requirements.materials.push('Cables unipolares 2.5mm', 'Cinta aisladora');
-    }
-    if (textContent.includes('enchufe') || textContent.includes('tomacorriente')) {
-        requirements.materials.push('Tomacorrientes', 'Fichas macho/hembra');
-    }
-    if (textContent.includes('papel') || textContent.includes('cartón') || textContent.includes('pegamento')) {
-        requirements.materials.push('Cartulina', 'Tijeras', 'Pegamento');
-    }
+    const textContent = (title + '\n\n' + htmlContent).replace(/<[^>]+>/g, ' ');
 
-    // PPE detection
-    if (textContent.includes('220v') || textContent.includes('tensión') || textContent.includes('electricidad')) {
-        requirements.ppe.push('Gafas de seguridad', 'Calzado dieléctrico');
-    }
-    if (textContent.includes('soldar') || textContent.includes('estaño')) {
-        requirements.ppe.push('Extractor de humo', 'Gafas de protección');
-    }
+    const systemPrompt = `
+Eres un asistente experto en analizar planes de estudio y planillas de profesores técnicos y de talleres.
+Se te dará el contenido extraído de un documento de clase. Tu objetivo es leer el documento y extraer estrictamente la siguiente metadata en formato JSON (y nada mas que JSON):
 
-    // Fallbacks if nothing detected
-    if (requirements.tools.length === 0) requirements.tools.push('Detectando...');
-    if (requirements.materials.length === 0) requirements.materials.push('Detectando...');
-    if (requirements.ppe.length === 0) requirements.ppe.push('Revisar protocolos');
+"metadata":
+- subject: La temática o título del taller (EJ: "Taller de Electricidad") 
+- course: A qué curso o año va dirigido si lo menciona (Ej: "2do B")
+- year: Año del ciclo lectivo (Ej: "2026")
+- hourlyLoad: Carga horaria que se requiera para la clase (Ej: "2 Modulos" o "4 horas cátedra")
+- classNumber: El número de la clase planificada en texto (Ej: "1", "3", o "Clase 4")
+- category: A cual de estas SEIS únicas categorías cerradas pertenece más fielmente: "Manualidades", "Proyecto Institucional", "Programación y Robótica", "Ciudadanía Digital", "Cuidado Digital", "Alfabetización". Si no encaja en ninguna porque es totalmente distinta, devuélve "Sin Categorizar".
 
-    return { metadata, requirements };
+"requirements":
+- tools: Un array de strings con las "Herramientas" (Ej: Pinzas, Computadoras, Destornillador)
+- materials: Un array de strings de "Insumos" o "Materiales" gastables (Ej: Pegamento, Cables, Leds)
+- ppe: (Equipo de Protección Personal) Un array con elementos de seguridad física o digital mencionados sugeridos.
+
+Formato EXACTO Requerido:
+{
+  "metadata": {"subject": "string", "course": "string", "year": "string", "hourlyLoad": "string", "classNumber": "string", "category": "string"},
+  "requirements": {"tools": ["string"], "materials": ["string"], "ppe": ["string"]}
+}
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+                { role: 'user', parts: [{ text: systemPrompt + '\n\n---\nDOCUMENTO A ANALIZAR:\n' + textContent }] }
+            ],
+            config: {
+                temperature: 0.1, // Keep it deterministic
+                responseMimeType: 'application/json', // Force JSON structure physically
+            }
+        });
+
+        // The text is guaranteed to be JSON due to the mimeType configuration
+        const dataText = response.text;
+
+        if (!dataText) throw new Error("Respuesta vacía de Gemini");
+
+        const parsedData = JSON.parse(dataText);
+
+        // Return strict type casting
+        return {
+            metadata: parsedData.metadata || {
+                subject: 'Desconocido', course: 'N/A', year: 'N/A', hourlyLoad: 'N/A', classNumber: 'N/A', category: 'Sin Categorizar'
+            },
+            requirements: parsedData.requirements || {
+                tools: [], materials: [], ppe: []
+            }
+        };
+
+    } catch (e) {
+        console.error("Error consultando Gemini AI:", e);
+        // Soft fallback
+        throw new Error("No se pudo analizar el documento con IA en este momento.");
+    }
+};
+
+export const askGeminiQuestion = async (documentContent: string, question: string): Promise<string> => {
+    const ai = getGeminiClient();
+    if (!ai) return "No hay conexión con la Inteligencia Artificial. Falta tu API Key.";
+
+    // Remove HTML tags for token saving
+    const cleanContext = documentContent.replace(/<[^>]+>/g, ' ');
+
+    const prompt = `
+Eres un asistente experto para Profesores. Se te dará el contenido de una clase planificada y luego una pregunta al respecto.
+Responde de forma concisa, educada, y muy útil, basándote UNICAMENTE en el contenido del documento.
+No alucines clases que no están en el texto.
+    
+--- CONTEXTO DEL DOCUMENTO ---
+${cleanContext}
+
+--- PREGUNTA DEL PROFESOR ---
+${question}
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [prompt]
+        });
+
+        return response.text || "La IA no devolvió ninguna respuesta.";
+    } catch (e) {
+        console.error("Error en chat de Gemini:", e);
+        return "Hubo un error al consultar a la Inteligencia Artificial.";
+    }
 };
