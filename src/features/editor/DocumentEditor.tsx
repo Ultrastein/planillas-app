@@ -274,7 +274,7 @@ export function DocumentEditor() {
 
         setCreationNumClase(nextNumber.toString()); // Pre-fill number for immediate linking without user effort
 
-        setUploadTitle(`${selectedDoc.title} (Clase ${nextNumber})`);
+        setUploadTitle(selectedDoc.title);
         setIsCreating(true);
     };
 
@@ -853,9 +853,14 @@ export function DocumentEditor() {
                                                         const docTematica = selectedDoc.tematica;
                                                         const currentParsedNum = parseFloat(selectedDoc.num_clase?.replace(',', '.') || 'NaN');
 
-                                                        // Filter docs in same tematica with valid numbers
+                                                        // Filter docs in same tematica AND exact same branch (Rama/title) with valid numbers
+                                                        const docRama = (selectedDoc.title || '').trim().toLowerCase();
                                                         const siblingDocs = documents
-                                                            .filter(d => d.tematica === docTematica && d.id !== selectedDoc.id)
+                                                            .filter(d => 
+                                                                d.tematica === docTematica && 
+                                                                (d.title || '').trim().toLowerCase() === docRama && 
+                                                                d.id !== selectedDoc.id
+                                                            )
                                                             .map(d => ({ ...d, parsedNum: parseFloat(d.num_clase?.replace(',', '.') || 'NaN') }))
                                                             .filter(d => !isNaN(d.parsedNum))
                                                             .sort((a, b) => a.parsedNum - b.parsedNum); // Ascending order
