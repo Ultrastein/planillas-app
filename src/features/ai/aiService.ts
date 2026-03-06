@@ -17,14 +17,14 @@ export interface AITechnicalRequirements {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const analyzeDocumentContent = async (htmlContent: string): Promise<{
+export const analyzeDocumentContent = async (htmlContent: string, title: string = ''): Promise<{
     metadata: AIMetadata;
     requirements: AITechnicalRequirements;
 }> => {
     // Simulate API delay
     await sleep(1500);
 
-    const textContent = htmlContent.replace(/<[^>]+>/g, ' ').toLowerCase();
+    const textContent = (title + ' ' + htmlContent).replace(/<[^>]+>/g, ' ').toLowerCase();
 
     // Category Detection (New Feature)
     let detectedCategory = 'No clasificado';
