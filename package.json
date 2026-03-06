@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/genai": "^1.44.0",
     "@hookform/resolvers": "^5.2.2",
     "@react-oauth/google": "^0.13.4",
     "@supabase/supabase-js": "^2.98.0",
