@@ -69,6 +69,19 @@
     font-weight: 600;
 }
 
+.collapsibleHeader {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    transition: color 0.2s ease;
+}
+
+.collapsibleHeader:hover {
+    color: var(--primary-color);
+}
+
 .navSection ul {
     list-style: none;
     padding-left: 0;
@@ -260,12 +273,19 @@
 
 /* RIGHT PANEL */
 .rightPanel {
-    width: var(--right-panel-width);
+    width: var(--right-panel-width, 320px);
     background-color: #f8fafc;
     border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    transition: width 0.3s ease, border-color 0.3s ease;
+    overflow: hidden;
+}
+
+.rightPanelCollapsed {
+    width: 0 !important;
+    border-left: none !important;
 }
 
 .panelHeader {
@@ -284,9 +304,16 @@
 }
 
 .panelContent {
+    width: var(--right-panel-width, 320px);
     flex: 1;
     overflow-y: auto;
     padding: 20px;
+    transition: opacity 0.2s ease;
+}
+
+.rightPanelCollapsed .panelContent {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .placeholderBox {

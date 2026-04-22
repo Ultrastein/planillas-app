@@ -92,7 +92,9 @@ CREATE TABLE IF NOT EXISTS public.documents (
   carga_horaria text,
   tematica text, -- Kategorías: manualidades, proyecto institucional, programacion y robotica, ciudadania digital, cuidado digital, alfabetizacion
   num_clase text,
-  recursos text
+  recursos text,
+  etiquetas text,
+  next_class_id uuid references public.documents(id) on delete set null
 );
 
 -- Ensure columns exist if table was already created
@@ -103,6 +105,8 @@ ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS carga_horaria text;
 ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS tematica text;
 ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS num_clase text;
 ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS recursos text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS etiquetas text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS next_class_id uuid references public.documents(id) on delete set null;
 
 alter table public.documents enable row level security;
 
