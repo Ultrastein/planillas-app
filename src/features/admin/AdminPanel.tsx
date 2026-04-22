@@ -188,6 +188,31 @@ export function AdminPanel() {
         }
     };
 
+    const handleRestoreDoc = async (id: string) => {
+        try {
+            const { error } = await supabase.from('documents').update({ status: 'active', delete_reason: null }).eq('id', id);
+            if (error) throw error;
+            fetchData();
+        } catch (err: any) {
+            setError('Error restaurando: ' + err.message);
+        }
+    };
+
+    const handlePermanentDeleteDoc = async (id: string) => {
+        const confirm = window.confirm('¿Estás seguro? Esto eliminará la planilla permanentemente y no se puede deshacer.');
+        if (!confirm) return;
+        try {
+            // Delete child rows first to avoid FK constraint errors
+            await supabase.from('comments').delete().eq('document_id', id);
+            await supabase.from('document_versions').delete().eq('document_id', id);
+            const { error } = await supabase.from('documents').delete().eq('id', id);
+            if (error) throw error;
+            fetchData();
+        } catch (err: any) {
+            setError('Error eliminando: ' + err.message);
+        }
+    };
+
     if (currentUser?.role !== 'admin') {
         return (
             <div className={styles.unauthorized}>
@@ -344,21 +369,40 @@ export function AdminPanel() {
                             <tr>
                                 <th>Documento Eliminado</th>
                                 <th>Autor</th>
-                                <th>Fecha Recreación</th>
-                                <th>Motivo de Borrado</th>
+                                <th>Fecha</th>
+                                <th>Motivo</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>Cargando papelera...</td></tr>
+                                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Cargando papelera...</td></tr>
                             ) : deletedDocs.length === 0 ? (
-                                <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>No hay planillas eliminadas.</td></tr>
+                                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>No hay planillas eliminadas.</td></tr>
                             ) : deletedDocs.map(doc => (
                                 <tr key={doc.id}>
                                     <td><strong>{doc.title}</strong><br /><small>{doc.file_type}</small></td>
                                     <td>{doc.author_name} ({doc.author_role})</td>
                                     <td>{new Date(doc.created_at).toLocaleDateString()}</td>
                                     <td style={{ color: 'var(--danger-color)', fontStyle: 'italic' }}>"{doc.delete_reason}"</td>
+                                    <td style={{ display: 'flex', gap: '8px' }}>
+                                        <button
+                                            className={styles.btnSecondary}
+                                            style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+                                            onClick={() => handleRestoreDoc(doc.id)}
+                                            title="Restaurar esta planilla"
+                                        >
+                                            ↩ Restaurar
+                                        </button>
+                                        <button
+                                            className={styles.btnDanger}
+                                            style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+                                            onClick={() => handlePermanentDeleteDoc(doc.id)}
+                                            title="Eliminar permanentemente"
+                                        >
+                                            🗑 Eliminar
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
