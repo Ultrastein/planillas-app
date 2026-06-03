@@ -693,6 +693,45 @@ export function DocumentEditor() {
         }
     };
 
+    const handleExportPDF = () => {
+        if (!selectedDoc) return;
+        const title = selectedDoc.title || 'Planificación';
+        const author = selectedDoc.author_name || '';
+        const date = new Date(selectedDoc.created_at).toLocaleDateString('es-AR');
+        const content = selectedDoc.content || '<p>Sin contenido.</p>';
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            showToast('El navegador bloqueó la ventana emergente. Permitila para exportar a PDF.', 'warning');
+            return;
+        }
+
+        printWindow.document.write(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 48px; max-width: 800px; margin: 0 auto; color: #1e293b; }
+    h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    .meta { color: #64748b; font-size: 0.85rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 28px; }
+    h2 { font-size: 1.15rem; margin-top: 24px; color: #334155; }
+    ul, ol { padding-left: 22px; }
+    li { margin-bottom: 4px; }
+    p { line-height: 1.7; margin: 8px 0; }
+    @media print { body { padding: 24px; } }
+  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <div class="meta">Autor: ${author} &nbsp;|&nbsp; Fecha: ${date}</div>
+  ${content}
+  <script>window.onload = function() { window.print(); setTimeout(() => window.close(), 1000); };<\/script>
+</body>
+</html>`);
+        printWindow.document.close();
+    };
+
     const handleCreateCategory = async () => {
         if (!newCatName.trim()) return;
         setLoading(true);
@@ -1317,9 +1356,19 @@ export function DocumentEditor() {
                                             {canEditSelected && (
                                                 <>
                                                     {selectedDoc.file_type === 'editor' && (
-                                                        <button className={styles.btnPrimary} onClick={handleCreateVersion} disabled={loading}>
-                                                            Guardar Versión
-                                                        </button>
+                                                        <>
+                                                            <button
+                                                                className={styles.btnSecondary}
+                                                                onClick={handleExportPDF}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                                title="Exportar como PDF para imprimir"
+                                                            >
+                                                                🖨️ Exportar PDF
+                                                            </button>
+                                                            <button className={styles.btnPrimary} onClick={handleCreateVersion} disabled={loading}>
+                                                                Guardar Versión
+                                                            </button>
+                                                        </>
                                                     )}
                                                     <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
                                                 </>
