@@ -9,10 +9,21 @@ import styles from './DocumentEditor.module.css';
 import * as mammoth from 'mammoth';
 import { Folder, FolderOpen, Plus, FileText, Search, X, ArrowLeft, Maximize2, Minimize2, Copy, Check } from 'lucide-react';
 import React from 'react';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
-    const { setSelectedDocId } = useDocumentStore();
+    const {
+        setSelectedDocId,
+        setSelectedDoc: setStoreDoc,
+        setAllDocuments,
+        pendingCreateFromAI,
+        setPendingCreateFromAI,
+        pendingReplacement,
+        setPendingReplacement,
+        setEditorSelection,
+    } = useDocumentStore();
+    const storeSelectedDoc = useDocumentStore(s => s.selectedDoc);
     const previewVersion = useVersionStore((state: any) => state.previewVersion);
 
     const { categories, fetchCategories } = useCategoryStore();
@@ -30,6 +41,8 @@ export function DocumentEditor() {
     // New States for Grid Layout
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [showBulkImport, setShowBulkImport] = useState(false);
+    const [bulkImportJson, setBulkImportJson] = useState('');
 
     // Reset internal filters when category changes
     useEffect(() => {
@@ -54,6 +67,39 @@ export function DocumentEditor() {
         setSelectedDocId(selectedDoc?.id || null);
     }, [selectedDoc, setSelectedDocId]);
 
+    // Sync selectedDoc to store so AiSidebar can read it
+    useEffect(() => {
+        setStoreDoc(selectedDoc);
+    }, [selectedDoc]);
+
+    // Sync allDocuments to store so AiSidebar has multi-doc chat context
+    useEffect(() => {
+        setAllDocuments(documents);
+    }, [documents]);
+
+    // Handle AI-generated document creation
+    useEffect(() => {
+        if (pendingCreateFromAI) {
+            handleSaveDocumentFromAI(pendingCreateFromAI);
+        }
+    }, [pendingCreateFromAI]);
+
+    // Apply AI text replacement when AiSidebar sends improved text
+    useEffect(() => {
+        if (pendingReplacement && editorSelectionRange) {
+            setPendingReplace({ text: pendingReplacement, ...editorSelectionRange });
+        }
+    }, [pendingReplacement]);
+
+    // Detect when AiSidebar inserted content at end of doc (rubric/activities)
+    useEffect(() => {
+        if (!storeSelectedDoc || !selectedDoc) return;
+        if (storeSelectedDoc.id === selectedDoc.id && storeSelectedDoc.content !== selectedDoc.content) {
+            handleAutoSave(selectedDoc.id, storeSelectedDoc.content);
+            setSelectedDoc(storeSelectedDoc);
+        }
+    }, [storeSelectedDoc?.content]);
+
     // Upload state
     const [uploadType, setUploadType] = useState<'pdf' | 'word' | 'gdoc' | 'editor'>('editor');
     const [uploadTitle, setUploadTitle] = useState('');
@@ -73,6 +119,14 @@ export function DocumentEditor() {
     const [isExpanded, setIsExpanded] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
     const [chainViewNodeId, setChainViewNodeId] = useState<string | null>(null);
+    const [editorSelectionRange, setEditorSelectionRange] = useState<{ from: number; to: number } | null>(null);
+    const [pendingReplace, setPendingReplace] = useState<{ text: string; from: number; to: number } | null>(null);
+    const [confirmModal, setConfirmModal] = useState<{
+        title: string;
+        message: string;
+        confirmLabel: string;
+        onConfirm: () => void;
+    } | null>(null);
 
     useEffect(() => {
         fetchDocs();
@@ -368,6 +422,51 @@ export function DocumentEditor() {
         }
     };
 
+    const handleBulkImport = async () => {
+        if (!bulkImportJson.trim() || !user) return;
+        setLoading(true);
+        try {
+            const parsedData = JSON.parse(bulkImportJson);
+            if (!Array.isArray(parsedData)) {
+                throw new Error("El JSON debe ser un arreglo (Array) de objetos.");
+            }
+
+            const newDocs = parsedData.map(item => ({
+                title: item.title || 'Clase sin título',
+                author_id: user.id,
+                author_name: user.name,
+                author_role: user.role,
+                file_type: 'editor',
+                content: item.content || null,
+                tematica: item.tematica || null,
+                num_clase: item.num_clase ? String(item.num_clase) : null,
+                etiquetas: item.etiquetas || null,
+                curso: item.curso || null,
+                grado: item.grado || null,
+                anio: item.anio || null,
+                carga_horaria: item.carga_horaria || null,
+                recursos: item.recursos || null,
+                status: 'active'
+            }));
+
+            const { error } = await supabase.from('documents').insert(newDocs);
+            if (error) {
+                console.error("Database insert error:", error);
+                throw new Error(`DB Insert Error: ${error.message}`);
+            }
+
+            setBulkImportJson('');
+            setShowBulkImport(false);
+            await fetchDocs();
+            alert(`¡Se importaron ${newDocs.length} clases correctamente!`);
+        } catch (err: any) {
+            console.error("Detailed handleBulkImport error:", err);
+            alert('Error al importar JSON: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleUpdateCategory = async (docId: string, newCategory: string) => {
         try {
             const { error } = await supabase.from('documents').update({ tematica: newCategory || null }).eq('id', docId);
@@ -609,6 +708,42 @@ export function DocumentEditor() {
         }
     };
 
+    const handleSaveDocumentFromAI = async (data: { title: string; content: string; metadata: any }) => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const newDoc = {
+                title: data.title,
+                author_id: user.id,
+                author_name: user.name,
+                author_role: user.role,
+                file_type: 'editor',
+                content: data.content,
+                tematica: data.metadata?.tematica || null,
+                num_clase: data.metadata?.num_clase || null,
+                grado: data.metadata?.grado || null,
+                anio: data.metadata?.anio || null,
+                carga_horaria: data.metadata?.carga_horaria || null,
+                curso: data.metadata?.curso || null,
+                status: 'active',
+            };
+            const { data: inserted, error } = await supabase.from('documents').insert(newDoc).select().single();
+            if (error) throw error;
+            await fetchDocs();
+            setSelectedDoc(inserted);
+        } catch (err: any) {
+            alert('Error creando documento desde IA: ' + err.message);
+        } finally {
+            setLoading(false);
+            setPendingCreateFromAI(null);
+        }
+    };
+
+    const handleEditorSelectionChange = (text: string, from: number, to: number) => {
+        setEditorSelectionRange(text ? { from, to } : null);
+        setEditorSelection(text ? { text, from, to } : null);
+    };
+
     const canCreateDocument = user?.role === 'admin' || user?.role === 'titular';
     const canEditSelected = selectedDoc ? (user?.role === 'admin' || (user?.role === 'titular' && selectedDoc.author_id === user?.id)) : false;
 
@@ -760,6 +895,9 @@ export function DocumentEditor() {
                                                 Vaciar Papelera
                                             </button>
                                         )}
+                                        <button className={styles.btnSecondary} onClick={() => setShowBulkImport(true)} style={{ padding: '12px 16px', fontSize: '0.95rem', backgroundColor: '#e2e8f0', color: '#0f172a', border: '1px solid #cbd5e1' }} title="Importar múltiples clases usando un JSON generado por IA externa">
+                                            Importar IA (JSON)
+                                        </button>
                                         <button className={styles.btnPrimary} onClick={() => setIsCreating(true)} style={{ padding: '12px 24px', fontSize: '1rem' }}>
                                             + Nueva Clase
                                         </button>
@@ -1221,6 +1359,14 @@ export function DocumentEditor() {
                                                     content={previewVersion ? (previewVersion.content || '') : (selectedDoc.content || '')}
                                                     onSave={(newContent) => handleAutoSave(selectedDoc.id, newContent)}
                                                     readOnly={!canEditSelected || !!previewVersion}
+                                                    onSelectionChange={canEditSelected ? handleEditorSelectionChange : undefined}
+                                                    selectionReplace={pendingReplace}
+                                                    onSelectionReplaceDone={() => {
+                                                        setPendingReplace(null);
+                                                        setPendingReplacement(null);
+                                                        setEditorSelectionRange(null);
+                                                        setEditorSelection(null);
+                                                    }}
                                                 />
                                             </div>
                                         )}
@@ -1364,6 +1510,50 @@ export function DocumentEditor() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* FLOATING BULK IMPORT MODAL */}
+            {showBulkImport && (
+                <div className={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) { setShowBulkImport(false); } }}>
+                    <div className={styles.uploadModal} style={{ maxWidth: '600px', width: '90%' }}>
+                        <div className={styles.modalHeader}>
+                            <h2>Importación Masiva por IA (JSON)</h2>
+                            <button className={styles.closeBtn} onClick={() => setShowBulkImport(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className={styles.uploadSection}>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                                Pega aquí el código JSON generado por tu IA externa (ChatGPT, Gemini, etc.). Debe ser un arreglo de objetos.
+                            </p>
+                            <textarea
+                                value={bulkImportJson}
+                                onChange={(e) => setBulkImportJson(e.target.value)}
+                                placeholder="[ { &quot;title&quot;: &quot;Clase 1&quot;, &quot;tematica&quot;: &quot;Historia&quot;, ... } ]"
+                                style={{ width: '100%', minHeight: '250px', padding: '12px', fontSize: '0.85rem', fontFamily: 'monospace', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', resize: 'vertical' }}
+                                autoFocus
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+                                <button className={styles.btnSecondary} onClick={() => setShowBulkImport(false)} disabled={loading}>
+                                    Cancelar
+                                </button>
+                                <button className={styles.btnPrimary} onClick={handleBulkImport} disabled={loading || !bulkImportJson.trim()}>
+                                    {loading ? 'Importando...' : 'Procesar e Importar'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {confirmModal && (
+                <ConfirmModal
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    confirmLabel={confirmModal.confirmLabel}
+                    onConfirm={confirmModal.onConfirm}
+                    onCancel={() => setConfirmModal(null)}
+                />
             )}
         </div>
     );
