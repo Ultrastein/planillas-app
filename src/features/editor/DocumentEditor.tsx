@@ -10,9 +10,11 @@ import * as mammoth from 'mammoth';
 import { Folder, FolderOpen, Plus, FileText, Search, X, ArrowLeft, Maximize2, Minimize2, Copy, Check } from 'lucide-react';
 import React from 'react';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { useToast } from '../../components/Toast/useToast';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
+    const { showToast } = useToast();
     const {
         setSelectedDocId,
         setSelectedDoc: setStoreDoc,
@@ -193,7 +195,7 @@ export function DocumentEditor() {
                     const result = await mammoth.extractRawText({ arrayBuffer });
                     setFileContent(result.value); // extracted text for preview
                 } catch (err) {
-                    alert('Error leyendo el archivo Word para previsualización');
+                    showToast('Error leyendo el archivo Word para previsualización', 'error');
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -201,7 +203,7 @@ export function DocumentEditor() {
     };
 
     const handleSaveDocument = async () => {
-        if (!user || !uploadTitle) return alert('Se requiere un título.');
+        if (!user || !uploadTitle) { showToast('Se requiere un título.', 'warning'); return; }
 
         setLoading(true);
         try {
@@ -230,7 +232,7 @@ export function DocumentEditor() {
                 setLoading(false);
                 setIsCreating(false);
                 setSelectedDoc(duplicateByTitle);
-                return alert('Ya existe un documento con este título. Te hemos redirigido a la planilla existente.');
+                showToast('Ya existe un documento con este título. Te hemos redirigido a la planilla existente.', 'warning'); return;
             }
 
             // Check if content already exists (only for non-empty, non-trivial content)
@@ -245,7 +247,7 @@ export function DocumentEditor() {
                     setLoading(false);
                     setIsCreating(false);
                     setSelectedDoc(duplicateByContent);
-                    return alert('Ya existe un documento con este mismo contenido. Te hemos redirigido a la planilla existente.');
+                    showToast('Ya existe un documento con este mismo contenido. Te hemos redirigido a la planilla existente.', 'warning'); return;
                 }
             }
 
@@ -261,7 +263,7 @@ export function DocumentEditor() {
                     setLoading(false);
                     setIsCreating(false);
                     setSelectedDoc(duplicateByUrl);
-                    return alert('Ya existe un documento con este mismo enlace. Te hemos redirigido a la planilla existente.');
+                    showToast('Ya existe un documento con este mismo enlace. Te hemos redirigido a la planilla existente.', 'warning'); return;
                 }
             }
             // --- Duplicate Check End ---
@@ -341,7 +343,7 @@ export function DocumentEditor() {
             }
         } catch (err: any) {
             console.error("Detailed handleSaveDocument error:", err);
-            alert('Error al guardar documento: ' + err.message);
+            showToast('Error al guardar documento: ' + err.message, 'error');
         } finally {
             setLoading(false);
         }
@@ -363,63 +365,62 @@ export function DocumentEditor() {
         setIsCreating(true);
     };
 
-    const handleDelete = async (docId: string) => {
-        const confirmDelete = window.confirm("El archivo será borrado y desaparecerá de la vista. ¿Deseas continuar?");
-        if (!confirmDelete) return;
-
-        try {
-            const { error } = await supabase
-                .from('documents')
-                .update({ status: 'deleted', delete_reason: 'Eliminado por el usuario' })
-                .eq('id', docId);
-
-            if (error) throw error;
-
-            setSelectedDoc(null);
-            setHasUnsavedChanges(false);
-            fetchDocs();
-        } catch (err: any) {
-            alert('Error eliminando: ' + err.message);
-        }
+    const handleDelete = (docId: string) => {
+        setConfirmModal({
+            title: 'Eliminar planificación',
+            message: 'El archivo será borrado y desaparecerá de la vista. Esta acción puede revertirse desde la papelera.',
+            confirmLabel: 'Eliminar',
+            onConfirm: async () => {
+                setConfirmModal(null);
+                try {
+                    const { error } = await supabase
+                        .from('documents')
+                        .update({ status: 'deleted', delete_reason: 'Eliminado por el usuario' })
+                        .eq('id', docId);
+                    if (error) throw error;
+                    setSelectedDoc(null);
+                    setHasUnsavedChanges(false);
+                    fetchDocs();
+                    showToast('Planificación eliminada.', 'success');
+                } catch (err: any) {
+                    showToast('Error eliminando: ' + err.message, 'error');
+                }
+            },
+        });
     };
 
-    const handleEmptyTrash = async () => {
-        const confirmEmpty = window.confirm("¿Estás completamente seguro de vaciar la papelera? Esto eliminará permanentemente todas las planificaciones borradas y no se pueden recuperar.");
-        if (!confirmEmpty) return;
-
-        setLoading(true);
-        try {
-            // WORKAROUND FOR FOREIGN KEY CONSTRAINT: Delete children via API first
-            // 1. Get all deleted docs
-            const { data: deletedDocs, error: fetchError } = await supabase
-                .from('documents')
-                .select('id')
-                .eq('status', 'deleted');
-
-            if (fetchError) throw fetchError;
-
-            if (deletedDocs && deletedDocs.length > 0) {
-                const deletedIds = deletedDocs.map(d => d.id);
-
-                // 2. Delete all comments & versions for these docs
-                await supabase.from('comments').delete().in('document_id', deletedIds);
-                await supabase.from('document_versions').delete().in('document_id', deletedIds);
-
-                // 3. Finally, delete the actual documents
-                const { error: deleteError } = await supabase.from('documents').delete().in('id', deletedIds);
-                if (deleteError) throw deleteError;
-
-                alert("Papelera vaciada correctamente.");
-            } else {
-                alert("La papelera ya está vacía.");
-            }
-
-            fetchDocs();
-        } catch (err: any) {
-            alert('Error vaciando la papelera: ' + err.message);
-        } finally {
-            setLoading(false);
-        }
+    const handleEmptyTrash = () => {
+        setConfirmModal({
+            title: 'Vaciar papelera',
+            message: '¿Estás completamente seguro? Esto eliminará PERMANENTEMENTE todas las planificaciones borradas. No se pueden recuperar.',
+            confirmLabel: 'Vaciar Papelera',
+            onConfirm: async () => {
+                setConfirmModal(null);
+                setLoading(true);
+                try {
+                    const { data: deletedDocs, error: fetchError } = await supabase
+                        .from('documents')
+                        .select('id')
+                        .eq('status', 'deleted');
+                    if (fetchError) throw fetchError;
+                    if (deletedDocs && deletedDocs.length > 0) {
+                        const deletedIds = deletedDocs.map(d => d.id);
+                        await supabase.from('comments').delete().in('document_id', deletedIds);
+                        await supabase.from('document_versions').delete().in('document_id', deletedIds);
+                        const { error: deleteError } = await supabase.from('documents').delete().in('id', deletedIds);
+                        if (deleteError) throw deleteError;
+                        showToast('Papelera vaciada correctamente.', 'success');
+                    } else {
+                        showToast('La papelera ya está vacía.', 'info');
+                    }
+                    fetchDocs();
+                } catch (err: any) {
+                    showToast('Error vaciando la papelera: ' + err.message, 'error');
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     };
 
     const handleBulkImport = async () => {
@@ -458,10 +459,10 @@ export function DocumentEditor() {
             setBulkImportJson('');
             setShowBulkImport(false);
             await fetchDocs();
-            alert(`¡Se importaron ${newDocs.length} clases correctamente!`);
+            showToast(`¡Se importaron ${newDocs.length} clases correctamente!`, 'success');
         } catch (err: any) {
             console.error("Detailed handleBulkImport error:", err);
-            alert('Error al importar JSON: ' + err.message);
+            showToast('Error al importar JSON: ' + err.message, 'error');
         } finally {
             setLoading(false);
         }
@@ -475,7 +476,7 @@ export function DocumentEditor() {
             setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
-            alert('Error al actualizar temática: ' + err.message);
+            showToast('Error al actualizar temática: ' + err.message, 'error');
         }
     };
 
@@ -493,7 +494,7 @@ export function DocumentEditor() {
             setHasUnsavedChanges(true);
         } catch (err: any) {
             console.error('Error al guardar siguiente clase:', err);
-            alert('No se pudo guardar el encadenado. Asegúrese de que la columna "next_class_id" existe en la tabla documents de Supabase. Err: ' + err.message);
+            showToast('No se pudo guardar el encadenado. Asegúrese de que la columna "next_class_id" existe en la tabla documents de Supabase. Err: ' + err.message, 'error');
         }
     };
 
@@ -555,7 +556,7 @@ export function DocumentEditor() {
             setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
-            alert('Error al guardar número de clase: ' + err.message);
+            showToast('Error al guardar número de clase: ' + err.message, 'error');
         }
     };
 
@@ -567,7 +568,7 @@ export function DocumentEditor() {
             setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
-            alert(`Error al guardar ${field}: ` + err.message);
+            showToast(`Error al guardar ${field}: ` + err.message, 'error');
         }
     };
 
@@ -615,7 +616,7 @@ export function DocumentEditor() {
             setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
-            alert('Error al actualizar docente: ' + err.message);
+            showToast('Error al actualizar docente: ' + err.message, 'error');
         }
     };
 
@@ -630,7 +631,7 @@ export function DocumentEditor() {
             });
             if (error) {
                 // Ignore schema warnings if table is missing, but notify user
-                alert('Aviso conectando comentarios. Err: ' + error.message);
+                showToast('Aviso conectando comentarios. Err: ' + error.message, 'warning');
                 return;
             }
             setNewCommentText('');
@@ -663,7 +664,7 @@ export function DocumentEditor() {
             const { data, error } = await supabase.from('documents').update(aiDataToSave).eq('id', selectedDoc.id).select().single();
             if (error) throw error;
             setSelectedDoc(data);
-            alert('¡Escaneo IA completado y Categoría (Temática) Detectada!');
+            showToast('¡Análisis IA completado y metadata detectada!', 'success');
         } catch (err) {
             console.error('AI Error:', err);
         } finally {
@@ -684,9 +685,9 @@ export function DocumentEditor() {
             if (error) throw error;
             // Force Version Sidebar refresh by clearing selectedDocId temporarily or just notifying global state
             // It will auto-refresh if the user clicks out and back, but let's notify the user
-            alert('Versión guardada correctamente. Puede verla en el historial lateral.');
+            showToast('Versión guardada correctamente.', 'success');
         } catch (err: any) {
-            alert('Error al guardar versión: ' + err.message);
+            showToast('Error al guardar versión: ' + err.message, 'error');
         } finally {
             setLoading(false);
         }
@@ -702,7 +703,7 @@ export function DocumentEditor() {
             setShowNewCatInput(false);
             fetchCategories();
         } catch (err: any) {
-            alert('Error al crear categoría: ' + err.message);
+            showToast('Error al crear categoría: ' + err.message, 'error');
         } finally {
             setLoading(false);
         }
@@ -732,7 +733,7 @@ export function DocumentEditor() {
             await fetchDocs();
             setSelectedDoc(inserted);
         } catch (err: any) {
-            alert('Error creando documento desde IA: ' + err.message);
+            showToast('Error creando documento desde IA: ' + err.message, 'error');
         } finally {
             setLoading(false);
             setPendingCreateFromAI(null);
