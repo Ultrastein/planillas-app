@@ -122,7 +122,6 @@ export function DocumentEditor() {
     const [isExpanded, setIsExpanded] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
     const [chainViewNodeId, setChainViewNodeId] = useState<string | null>(null);
-    const [editorSelectionRange, setEditorSelectionRange] = useState<{ from: number; to: number } | null>(null);
     const lastHandledContentRef = useRef<string | null | undefined>(undefined);
     const [pendingReplace, setPendingReplace] = useState<{ text: string; from: number; to: number } | null>(null);
     const [confirmModal, setConfirmModal] = useState<{
@@ -803,7 +802,6 @@ export function DocumentEditor() {
     };
 
     const handleEditorSelectionChange = (text: string, from: number, to: number) => {
-        setEditorSelectionRange(text ? { from, to } : null);
         setEditorSelection(text ? { text, from, to } : null);
     };
 
@@ -1481,7 +1479,6 @@ export function DocumentEditor() {
                                                     onSelectionReplaceDone={() => {
                                                         setPendingReplace(null);
                                                         setPendingReplacement(null);
-                                                        setEditorSelectionRange(null);
                                                         setEditorSelection(null);
                                                     }}
                                                 />
