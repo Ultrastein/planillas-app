@@ -3,13 +3,29 @@ import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useState } from 'react';
 import styles from './RichTextEditor.module.css';
 
+interface SelectionReplace {
+    text: string;
+    from: number;
+    to: number;
+}
+
 interface RichTextEditorProps {
     content: string;
     onSave: (content: string) => void;
     readOnly?: boolean;
+    onSelectionChange?: (text: string, from: number, to: number) => void;
+    selectionReplace?: SelectionReplace | null;
+    onSelectionReplaceDone?: () => void;
 }
 
-export function RichTextEditor({ content, onSave, readOnly = false }: RichTextEditorProps) {
+export function RichTextEditor({
+    content,
+    onSave,
+    readOnly = false,
+    onSelectionChange,
+    selectionReplace,
+    onSelectionReplaceDone,
+}: RichTextEditorProps) {
     const [isSaving, setIsSaving] = useState(false);
 
     const editor = useEditor({
@@ -17,15 +33,19 @@ export function RichTextEditor({ content, onSave, readOnly = false }: RichTextEd
         content: content,
         editable: !readOnly,
         onUpdate: () => {
-            // Debounced save
             setIsSaving(true);
+        },
+        onSelectionUpdate: ({ editor: ed }) => {
+            if (!onSelectionChange) return;
+            const { from, to } = ed.state.selection;
+            const text = from === to ? '' : ed.state.doc.textBetween(from, to, ' ');
+            onSelectionChange(text, from, to);
         },
     });
 
     useEffect(() => {
         if (editor && content !== editor.getHTML()) {
             // Only update if external content changes drastically (e.g., selecting a new doc or version)
-            // Be careful not to reset cursor position by checking if it's already matching
             editor.commands.setContent(content);
         }
     }, [content, editor]);
@@ -41,6 +61,15 @@ export function RichTextEditor({ content, onSave, readOnly = false }: RichTextEd
             return () => clearTimeout(timeout);
         }
     }, [isSaving, editor, onSave]);
+
+    // Handle pending text replacement from AI
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        if (!selectionReplace || !editor) return;
+        const { text, from, to } = selectionReplace;
+        editor.chain().focus().deleteRange({ from, to }).insertContentAt(from, text).run();
+        onSelectionReplaceDone?.();
+    }, [selectionReplace]);
 
     if (!editor) return null;
 
