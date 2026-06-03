@@ -179,9 +179,14 @@ export function AiSidebar() {
                 allDocuments.map(d => `- "${d.title}" | Temática: ${d.tematica || 'Sin categorizar'} | Grado: ${d.grado || 'N/A'} | Autor: ${d.author_name}`).join('\n');
         }
 
-        const aiResponse = await askGeminiQuestion(docContent, q, globalContext);
-        setChatLog(prev => [...prev, { role: 'ai', text: aiResponse }]);
-        setChatLoading(false);
+        try {
+            const aiResponse = await askGeminiQuestion(docContent, q, globalContext);
+            setChatLog(prev => [...prev, { role: 'ai', text: aiResponse }]);
+        } catch (e: any) {
+            setChatLog(prev => [...prev, { role: 'ai', text: 'Error al consultar la IA: ' + (e.message || 'Error desconocido') }]);
+        } finally {
+            setChatLoading(false);
+        }
     };
 
     const insertAtEndOfDoc = (html: string) => {
