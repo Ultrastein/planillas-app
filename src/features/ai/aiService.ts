@@ -185,7 +185,11 @@ Devuelve SOLO un JSON válido con esta estructura exacta:
     });
 
     if (!response.text) throw new Error('Respuesta vacía de Gemini');
-    return JSON.parse(response.text);
+    try {
+        return JSON.parse(response.text);
+    } catch {
+        throw new Error('La IA devolvió un formato inválido. Intentá nuevamente.');
+    }
 };
 
 export const generateRubric = async (docContent: string, docTitle: string): Promise<string> => {
@@ -238,7 +242,11 @@ ${cleanContent}`;
     });
 
     if (!response.text) throw new Error('Respuesta vacía de Gemini');
-    return JSON.parse(response.text);
+    try {
+        return JSON.parse(response.text);
+    } catch {
+        throw new Error('La IA devolvió un formato inválido. Intentá nuevamente.');
+    }
 };
 
 export const generateExecutiveSummary = async (docContent: string, docTitle: string): Promise<string> => {
