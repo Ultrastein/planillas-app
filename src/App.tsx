@@ -7,6 +7,7 @@ import { supabase } from './lib/supabase';
 import { DesktopLayout } from './layouts/DesktopLayout';
 import { AdminPanel } from './features/admin/AdminPanel';
 import { DocumentEditor } from './features/editor/DocumentEditor';
+import { ToastContainer } from './components/Toast/ToastContainer';
 
 function App() {
   const { setUser, setLoading, fetchProfile, isLoading } = useAuthStore();
@@ -58,6 +59,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>
+      <ToastContainer />
     </GoogleOAuthProvider>
   );
 }
