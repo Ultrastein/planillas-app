@@ -1,0 +1,79 @@
+<h2>Diseño del AiSidebar expandido</h2>
+<p class="subtitle">El sidebar de IA se convierte en un hub con 4 pestañas. ¿Este layout te parece bien?</p>
+
+<div class="mockup" style="max-width:340px;margin:0 auto">
+  <div class="mockup-header">Panel IA — sidebar derecho</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;font-size:0.78rem">
+
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:2px solid #e2e8f0;background:#f8fafc">
+      <div style="flex:1;padding:8px 4px;text-align:center;background:#3b82f6;color:white;font-weight:600;font-size:0.72rem;cursor:pointer">✨ Generar</div>
+      <div style="flex:1;padding:8px 4px;text-align:center;color:#64748b;font-size:0.72rem;cursor:pointer;border-left:1px solid #e2e8f0">🔍 Analizar</div>
+      <div style="flex:1;padding:8px 4px;text-align:center;color:#64748b;font-size:0.72rem;cursor:pointer;border-left:1px solid #e2e8f0">🛠️ Mejorar</div>
+      <div style="flex:1;padding:8px 4px;text-align:center;color:#64748b;font-size:0.72rem;cursor:pointer;border-left:1px solid #e2e8f0">💬 Chat</div>
+    </div>
+
+    <!-- Tab content: Generar -->
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-weight:600;color:#1e293b;font-size:0.85rem">Generador de Planificación</div>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px;color:#1d4ed8;font-size:0.75rem">
+        Describí la clase que necesitás y la IA la crea completa con estructura pedagógica.
+      </div>
+      <textarea class="mock-input" style="min-height:60px;resize:vertical;font-size:0.75rem" placeholder="Ej: Clase de 2 módulos sobre Arduino para 3er año. Objetivos: introducir pines digitales."></textarea>
+      <button class="mock-button" style="background:#3b82f6;color:white;border:none;padding:8px 12px;border-radius:6px;font-size:0.78rem;font-weight:600">✨ Generar Planificación Completa</button>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:4px 0"/>
+
+      <div style="font-weight:600;color:#1e293b;font-size:0.85rem">Plantillas Rápidas</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px;cursor:pointer;font-size:0.72rem;text-align:center;color:#15803d">⚡ Electricidad</div>
+        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:8px;cursor:pointer;font-size:0.72rem;text-align:center;color:#7c3aed">🤖 Robótica</div>
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:8px;cursor:pointer;font-size:0.72rem;text-align:center;color:#c2410c">🖥️ Programación</div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:8px;cursor:pointer;font-size:0.72rem;text-align:center;color:#1d4ed8">📱 Digital</div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:4px 0"/>
+
+      <div style="font-weight:600;color:#1e293b;font-size:0.85rem">Resumen Ejecutivo</div>
+      <p style="color:#64748b;font-size:0.75rem;margin:0">Genera una síntesis de una línea del documento actual para informes o directivos.</p>
+      <button class="mock-button" style="background:#e2e8f0;color:#374151;border:none;padding:7px 12px;border-radius:6px;font-size:0.78rem">📄 Generar Resumen</button>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:24px">
+  <div class="mockup" style="max-width:340px;margin:0 auto">
+    <div class="mockup-header">Tab "Mejorar" — cuando hay un doc abierto</div>
+    <div class="mockup-body" style="padding:16px;font-size:0.78rem;display:flex;flex-direction:column;gap:10px">
+      <div style="font-weight:600;color:#1e293b;font-size:0.85rem">🛠️ Herramientas sobre el documento</div>
+
+      <div style="background:white;border:1px solid #e2e8f0;border-radius:8px;padding:12px;cursor:pointer;display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:1.2rem">📋</span>
+        <div>
+          <div style="font-weight:600;color:#1e293b;font-size:0.8rem">Generar Rúbrica de Evaluación</div>
+          <div style="color:#64748b;font-size:0.72rem;margin-top:2px">Crea criterios e indicadores basados en el contenido de la clase.</div>
+        </div>
+      </div>
+
+      <div style="background:white;border:1px solid #e2e8f0;border-radius:8px;padding:12px;cursor:pointer;display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:1.2rem">💡</span>
+        <div>
+          <div style="font-weight:600;color:#1e293b;font-size:0.8rem">Sugerir Actividades Complementarias</div>
+          <div style="color:#64748b;font-size:0.72rem;margin-top:2px">3 actividades de refuerzo, extensión o evaluación alternativa.</div>
+        </div>
+      </div>
+
+      <div style="background:white;border:1px solid #e2e8f0;border-radius:8px;padding:12px;cursor:pointer;display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:1.2rem">✏️</span>
+        <div>
+          <div style="font-weight:600;color:#1e293b;font-size:0.8rem">Mejorar Texto Seleccionado</div>
+          <div style="color:#64748b;font-size:0.72rem;margin-top:2px">Seleccioná texto en el editor y hacé clic aquí para mejorarlo con IA.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:20px;padding:16px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe">
+  <p style="margin:0;font-size:0.85rem;color:#1d4ed8"><strong>¿Este diseño de sidebar con 4 pestañas te parece bien?</strong> El tab "Chat" mantiene el chat actual + agrega capacidad multi-documento. Avisame si querés cambiar algo.</p>
+</div>
