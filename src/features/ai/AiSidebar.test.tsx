@@ -1,51 +1,67 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiSidebar } from './AiSidebar';
-import { useVersionStore } from '../../store/useVersionStore';
+import { useDocumentStore } from '../../store/useDocumentStore';
 
-// Mock Lucide icons
 vi.mock('lucide-react', () => ({
     Sparkles: () => <div>Sparkles</div>,
     Hammer: () => <div>Hammer</div>,
     ShieldAlert: () => <div>ShieldAlert</div>,
     Package: () => <div>Package</div>,
+    Send: () => <div>Send</div>,
 }));
 
-describe('AiSidebar Component', () => {
+vi.mock('./aiService', () => ({
+    analyzeDocumentContent: vi.fn(),
+    askGeminiQuestion: vi.fn(),
+    generateFullPlan: vi.fn(),
+    generateRubric: vi.fn(),
+    suggestActivities: vi.fn(),
+    generateExecutiveSummary: vi.fn(),
+    improveText: vi.fn(),
+}));
+
+vi.mock('../../data/templates', () => ({
+    QUICK_TEMPLATES: [
+        { id: 'test', name: 'Test', icon: '🧪', prompt: 'test prompt' },
+    ],
+}));
+
+describe('AiSidebar', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        useVersionStore.setState({ versions: [], previewVersion: null, isLoading: false });
-    });
-
-    it('renders empty state when no versions exist', () => {
-        // Versions is empty by default in beforeEach
-        render(<AiSidebar />);
-        expect(screen.getByText(/Guarda tu primer snapshot/i)).toBeInTheDocument();
-    });
-
-    it('shows analyzing state and then results when a version exists', async () => {
-        useVersionStore.setState({
-            versions: [
-                {
-                    id: '1',
-                    document_id: 'doc-1',
-                    content: 'Electricidad 101',
-                    author_id: 'u1',
-                    author_name: 'Test Docente',
-                    created_at: new Date().toISOString()
-                }
-            ]
+        useDocumentStore.setState({
+            selectedDoc: null,
+            allDocuments: [],
+            editorSelection: null,
+            pendingReplacement: null,
+            pendingCreateFromAI: null,
         });
+    });
 
+    it('renders Generar tab by default with generator section', () => {
         render(<AiSidebar />);
+        expect(screen.getByText(/Generador de Planificación/i)).toBeInTheDocument();
+    });
 
-        // Initially shows analyzing
-        expect(screen.getByText('Escaneando requerimientos...')).toBeInTheDocument();
+    it('shows all 4 tab buttons', () => {
+        render(<AiSidebar />);
+        expect(screen.getByText('✨ Generar')).toBeInTheDocument();
+        expect(screen.getByText('🔍 Analizar')).toBeInTheDocument();
+        expect(screen.getByText('🛠️ Mejorar')).toBeInTheDocument();
+        expect(screen.getByText('💬 Chat')).toBeInTheDocument();
+    });
 
-        // After mock delay, it should show results
-        await waitFor(() => {
-            expect(screen.getByText('Taller de Electricidad')).toBeInTheDocument();
-            expect(screen.getByText('Gafas de seguridad')).toBeInTheDocument();
-        }, { timeout: 3000 });
+    it('shows empty state in Analizar tab when no doc selected', () => {
+        render(<AiSidebar />);
+        fireEvent.click(screen.getByText('🔍 Analizar'));
+        expect(screen.getByText(/Abrí una planificación para analizarla/i)).toBeInTheDocument();
+    });
+
+    it('shows global chat mode message when no doc is selected', () => {
+        useDocumentStore.setState({ allDocuments: [{ id: '1', title: 'Clase 1', tematica: 'Robótica', grado: '3ro', author_name: 'Prof X' }] });
+        render(<AiSidebar />);
+        fireEvent.click(screen.getByText('💬 Chat'));
+        expect(screen.getByText(/1 planificaciones disponibles/i)).toBeInTheDocument();
     });
 });

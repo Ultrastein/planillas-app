@@ -135,3 +135,148 @@
     background-color: #ffedd5;
     color: #c2410c;
 }
+
+/* Tabs */
+.tabBar {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
+.tab {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border: none;
+    background: transparent;
+    transition: background 0.15s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.tab:hover { background: #e2e8f0; }
+
+.tabActive {
+    color: var(--primary-color);
+    font-weight: 700;
+    border-bottom: 2px solid var(--primary-color);
+    background: white;
+}
+
+.generatorTextarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    resize: vertical;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.templateGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.templateChip {
+    padding: 10px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    text-align: center;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: opacity 0.15s;
+}
+
+.templateChip:hover { opacity: 0.8; }
+
+.toolCard {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    transition: border-color 0.15s;
+}
+
+.toolCard:hover { border-color: var(--primary-color); }
+
+.toolCardIcon { font-size: 1.4rem; line-height: 1; }
+
+.toolCardTitle {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    margin: 0 0 2px;
+}
+
+.toolCardDesc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.resultBox {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 0.82rem;
+    overflow-x: auto;
+}
+
+.insertBtn {
+    margin-top: 8px;
+    padding: 6px 14px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.insertBtn:hover { background: var(--primary-hover, #2563eb); }
+
+.activityItem {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+.activityBadge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.selectionPreview {
+    background: #fef9c3;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 0.8rem;
+    color: #92400e;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
