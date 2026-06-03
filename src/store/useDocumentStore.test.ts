@@ -41,8 +41,9 @@ describe('useDocumentStore', () => {
     });
 
     it('sets pendingReplacement correctly', () => {
-        useDocumentStore.getState().setPendingReplacement('texto mejorado');
-        expect(useDocumentStore.getState().pendingReplacement).toBe('texto mejorado');
+        const replacement = { text: 'texto mejorado', from: 5, to: 20 };
+        useDocumentStore.getState().setPendingReplacement(replacement);
+        expect(useDocumentStore.getState().pendingReplacement).toEqual(replacement);
         useDocumentStore.getState().setPendingReplacement(null);
         expect(useDocumentStore.getState().pendingReplacement).toBeNull();
     });

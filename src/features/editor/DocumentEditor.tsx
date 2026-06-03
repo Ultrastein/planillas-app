@@ -89,8 +89,8 @@ export function DocumentEditor() {
 
     // Apply AI text replacement when AiSidebar sends improved text
     useEffect(() => {
-        if (pendingReplacement && editorSelectionRange) {
-            setPendingReplace({ text: pendingReplacement, ...editorSelectionRange });
+        if (pendingReplacement) {
+            setPendingReplace(pendingReplacement);
         }
     }, [pendingReplacement]);
 
