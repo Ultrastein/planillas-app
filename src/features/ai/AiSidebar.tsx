@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Sparkles, Hammer, ShieldAlert, Package, Send } from 'lucide-react';
 import { useDocumentStore } from '../../store/useDocumentStore';
+import { useToast } from '../../components/Toast/useToast';
 import {
     analyzeDocumentContent,
     askGeminiQuestion,
@@ -42,6 +43,8 @@ export function AiSidebar() {
         setPendingCreateFromAI,
         setPendingReplacement,
     } = useDocumentStore();
+
+    const { showToast } = useToast();
 
     const [activeTab, setActiveTab] = useState<Tab>('generar');
 
@@ -90,7 +93,7 @@ export function AiSidebar() {
             setPendingCreateFromAI(result);
             setGeneratorPrompt('');
         } catch (e: any) {
-            alert('Error generando planificación: ' + e.message);
+            showToast('Error generando planificación: ' + e.message, 'error');
         } finally {
             setGeneratorLoading(false);
         }
@@ -104,7 +107,7 @@ export function AiSidebar() {
             setAnalyzeMetadata(result.metadata);
             setAnalyzeRequirements(result.requirements);
         } catch (e: any) {
-            alert('Error analizando: ' + e.message);
+            showToast('Error analizando: ' + e.message, 'error');
         } finally {
             setAnalyzeLoading(false);
         }
@@ -117,7 +120,7 @@ export function AiSidebar() {
             const result = await generateExecutiveSummary(selectedDoc.content, selectedDoc.title);
             setSummaryResult(result);
         } catch (e: any) {
-            alert('Error generando resumen: ' + e.message);
+            showToast('Error generando resumen: ' + e.message, 'error');
         } finally {
             setSummaryLoading(false);
         }
@@ -130,7 +133,7 @@ export function AiSidebar() {
             const result = await generateRubric(selectedDoc.content, selectedDoc.title);
             setRubricsResult(result);
         } catch (e: any) {
-            alert('Error generando rúbrica: ' + e.message);
+            showToast('Error generando rúbrica: ' + e.message, 'error');
         } finally {
             setRubricsLoading(false);
         }
@@ -143,7 +146,7 @@ export function AiSidebar() {
             const result = await suggestActivities(selectedDoc.content, selectedDoc.title);
             setActivitiesResult(result);
         } catch (e: any) {
-            alert('Error sugiriendo actividades: ' + e.message);
+            showToast('Error sugiriendo actividades: ' + e.message, 'error');
         } finally {
             setActivitiesLoading(false);
         }
@@ -151,12 +154,16 @@ export function AiSidebar() {
 
     const handleImproveText = async () => {
         if (!editorSelection?.text) return;
+        // Capture range NOW before async call (user might move cursor during AI call)
+        const capturedFrom = editorSelection.from;
+        const capturedTo = editorSelection.to;
+        const capturedText = editorSelection.text;
         setImproveLoading(true);
         try {
-            const result = await improveText(editorSelection.text);
-            setPendingReplacement(result);
+            const result = await improveText(capturedText);
+            setPendingReplacement({ text: result, from: capturedFrom, to: capturedTo });
         } catch (e: any) {
-            alert('Error mejorando texto: ' + e.message);
+            showToast('Error mejorando texto: ' + e.message, 'error');
         } finally {
             setImproveLoading(false);
         }

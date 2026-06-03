@@ -28,8 +28,8 @@ interface DocumentState {
     setAllDocuments: (docs: any[]) => void;
     editorSelection: EditorSelection | null;
     setEditorSelection: (sel: EditorSelection | null) => void;
-    pendingReplacement: string | null;
-    setPendingReplacement: (text: string | null) => void;
+    pendingReplacement: { text: string; from: number; to: number } | null;
+    setPendingReplacement: (data: { text: string; from: number; to: number } | null) => void;
     pendingCreateFromAI: PendingCreateFromAI | null;
     setPendingCreateFromAI: (data: PendingCreateFromAI | null) => void;
     isExpanded: boolean;
@@ -46,7 +46,7 @@ export const useDocumentStore = create<DocumentState>((set) => ({
     editorSelection: null,
     setEditorSelection: (sel) => set({ editorSelection: sel }),
     pendingReplacement: null,
-    setPendingReplacement: (text) => set({ pendingReplacement: text }),
+    setPendingReplacement: (data) => set({ pendingReplacement: data }),
     pendingCreateFromAI: null,
     setPendingCreateFromAI: (data) => set({ pendingCreateFromAI: data }),
     isExpanded: false,
