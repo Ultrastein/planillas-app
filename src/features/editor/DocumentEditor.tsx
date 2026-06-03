@@ -784,6 +784,41 @@ export function DocumentEditor() {
         setEditorSelection(text ? { text, from, to } : null);
     };
 
+    const handleDuplicate = async () => {
+        if (!selectedDoc || !user) return;
+        setLoading(true);
+        try {
+            const duplicated = {
+                title: `Copia de ${selectedDoc.title}`,
+                author_id: user.id,
+                author_name: user.name,
+                author_role: user.role,
+                file_type: selectedDoc.file_type,
+                file_url: selectedDoc.file_type !== 'editor' ? selectedDoc.file_url : null,
+                content: selectedDoc.content || null,
+                tematica: selectedDoc.tematica || null,
+                num_clase: null,
+                etiquetas: selectedDoc.etiquetas || null,
+                curso: selectedDoc.curso || null,
+                grado: selectedDoc.grado || null,
+                anio: selectedDoc.anio || null,
+                carga_horaria: selectedDoc.carga_horaria || null,
+                recursos: selectedDoc.recursos || null,
+                next_class_id: null,
+                status: 'active',
+            };
+            const { data, error } = await supabase.from('documents').insert(duplicated).select().single();
+            if (error) throw error;
+            await fetchDocs();
+            setSelectedDoc(data);
+            showToast('Clase duplicada correctamente.', 'success');
+        } catch (err: any) {
+            showToast('Error duplicando: ' + err.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const canCreateDocument = user?.role === 'admin' || user?.role === 'titular';
     const canEditSelected = selectedDoc ? (user?.role === 'admin' || (user?.role === 'titular' && selectedDoc.author_id === user?.id)) : false;
 
@@ -1370,6 +1405,15 @@ export function DocumentEditor() {
                                                             </button>
                                                         </>
                                                     )}
+                                                    <button
+                                                        className={styles.btnSecondary}
+                                                        onClick={handleDuplicate}
+                                                        disabled={loading}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                        title="Crear una copia de esta clase"
+                                                    >
+                                                        <Copy size={16} /> Duplicar
+                                                    </button>
                                                     <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
                                                 </>
                                             )}
