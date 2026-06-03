@@ -113,34 +113,167 @@ Formato EXACTO Requerido:
     }
 };
 
-export const askGeminiQuestion = async (documentContent: string, question: string): Promise<string> => {
+export const askGeminiQuestion = async (
+    documentContent: string,
+    question: string,
+    globalContext?: string
+): Promise<string> => {
     const ai = getGeminiClient();
     if (!ai) return "No hay conexión con la Inteligencia Artificial. Falta tu API Key.";
 
-    // Remove HTML tags for token saving
-    const cleanContext = documentContent.replace(/<[^>]+>/g, ' ');
+    const cleanContext = documentContent
+        ? documentContent.replace(/<[^>]+>/g, ' ')
+        : '';
 
-    const prompt = `
-Eres un asistente experto para Profesores. Se te dará el contenido de una clase planificada y luego una pregunta al respecto.
-Responde de forma concisa, educada, y muy útil, basándote UNICAMENTE en el contenido del documento.
-No alucines clases que no están en el texto.
-    
---- CONTEXTO DEL DOCUMENTO ---
-${cleanContext}
+    const contextSection = globalContext
+        ? `--- CONTEXTO GLOBAL (todas las planificaciones) ---\n${globalContext}\n\n`
+        : cleanContext
+        ? `--- CONTEXTO DEL DOCUMENTO ---\n${cleanContext}\n\n`
+        : '';
 
---- PREGUNTA DEL PROFESOR ---
-${question}
-    `;
+    const prompt = `Eres un asistente experto para Profesores. ${contextSection}--- PREGUNTA DEL PROFESOR ---\n${question}`;
 
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: [prompt]
         });
-
         return response.text || "La IA no devolvió ninguna respuesta.";
     } catch (e) {
         console.error("Error en chat de Gemini:", e);
         return "Hubo un error al consultar a la Inteligencia Artificial.";
     }
+};
+
+export interface Activity {
+    title: string;
+    description: string;
+    type: 'refuerzo' | 'extension' | 'evaluacion';
+}
+
+export const generateFullPlan = async (description: string): Promise<{
+    title: string;
+    content: string;
+    metadata: {
+        curso: string; grado: string; anio: string;
+        carga_horaria: string; tematica: string; num_clase: string;
+    };
+}> => {
+    const ai = getGeminiClient();
+    if (!ai) throw new Error('No hay conexión con la IA. Falta API Key.');
+
+    const prompt = `Eres un experto en pedagogía técnica. Genera una planificación de clase completa basándote en esta descripción: "${description}".
+
+Devuelve SOLO un JSON válido con esta estructura exacta:
+{
+  "title": "Título de la clase",
+  "content": "HTML completo con: <h2>Objetivos</h2>, <h2>Desarrollo</h2> (con subsecciones Introducción, Actividad Principal, Cierre), <h2>Evaluación</h2>",
+  "metadata": {
+    "curso": "Nombre del taller o materia",
+    "grado": "Año y división si se menciona",
+    "anio": "${new Date().getFullYear()}",
+    "carga_horaria": "Duración estimada",
+    "tematica": "Una de: Manualidades, Proyecto Institucional, Programación y Robótica, Ciudadanía Digital, Cuidado Digital, Alfabetización",
+    "num_clase": "1"
+  }
+}`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.6, responseMimeType: 'application/json' }
+    });
+
+    if (!response.text) throw new Error('Respuesta vacía de Gemini');
+    return JSON.parse(response.text);
+};
+
+export const generateRubric = async (docContent: string, docTitle: string): Promise<string> => {
+    const ai = getGeminiClient();
+    if (!ai) throw new Error('No hay conexión con la IA. Falta API Key.');
+
+    const cleanContent = (docTitle + '\n' + docContent).replace(/<[^>]+>/g, ' ');
+    const prompt = `Eres un experto en evaluación educativa. Basándote en el siguiente plan de clase, genera una rúbrica de evaluación en HTML.
+
+La rúbrica debe tener esta estructura de tabla HTML con 5 columnas: Criterio | Insatisfactorio (1) | En Proceso (2) | Satisfactorio (3) | Sobresaliente (4).
+Genera entre 4 y 6 criterios relevantes al contenido de la clase. Usa estilos inline básicos para la tabla.
+Devuelve SOLO el HTML de la tabla, sin explicaciones.
+
+CLASE:
+${cleanContent}`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.3 }
+    });
+
+    if (!response.text) throw new Error('Respuesta vacía de Gemini');
+    return response.text;
+};
+
+export const suggestActivities = async (docContent: string, docTitle: string): Promise<Activity[]> => {
+    const ai = getGeminiClient();
+    if (!ai) throw new Error('No hay conexión con la IA. Falta API Key.');
+
+    const cleanContent = (docTitle + '\n' + docContent).replace(/<[^>]+>/g, ' ');
+    const prompt = `Eres un experto en pedagogía. Basándote en el siguiente plan de clase, sugiere exactamente 3 actividades complementarias variadas.
+
+Devuelve SOLO un JSON válido con esta estructura:
+[
+  {"title": "...", "description": "...", "type": "refuerzo"},
+  {"title": "...", "description": "...", "type": "extension"},
+  {"title": "...", "description": "...", "type": "evaluacion"}
+]
+
+Los tipos posibles son: "refuerzo" (para quienes necesitan más práctica), "extension" (para quienes quieren profundizar), "evaluacion" (actividad de evaluación alternativa).
+
+CLASE:
+${cleanContent}`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.5, responseMimeType: 'application/json' }
+    });
+
+    if (!response.text) throw new Error('Respuesta vacía de Gemini');
+    return JSON.parse(response.text);
+};
+
+export const generateExecutiveSummary = async (docContent: string, docTitle: string): Promise<string> => {
+    const ai = getGeminiClient();
+    if (!ai) throw new Error('No hay conexión con la IA. Falta API Key.');
+
+    const cleanContent = (docTitle + '\n' + docContent).replace(/<[^>]+>/g, ' ');
+    const prompt = `Resume en UNA SOLA ORACIÓN concisa (máximo 30 palabras) el siguiente plan de clase para un informe directivo. Solo la oración, sin puntos extra ni explicaciones.
+
+CLASE:
+${cleanContent}`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.2 }
+    });
+
+    return response.text?.trim() || 'No se pudo generar el resumen.';
+};
+
+export const improveText = async (text: string): Promise<string> => {
+    const ai = getGeminiClient();
+    if (!ai) throw new Error('No hay conexión con la IA. Falta API Key.');
+
+    const prompt = `Eres un asistente de redacción para profesores. Mejora el siguiente texto educativo: hazlo más claro, profesional y apropiado para un documento pedagógico, manteniendo su significado original. Devuelve SOLO el texto mejorado, sin comillas ni explicaciones.
+
+TEXTO:
+${text}`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.5 }
+    });
+
+    return response.text?.trim() || text;
 };
