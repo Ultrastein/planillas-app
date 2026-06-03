@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDocumentStore } from '../../store/useDocumentStore';
 import { supabase } from '../../lib/supabase';
@@ -17,8 +17,9 @@ export function DocumentEditor() {
     const { profile: user } = useAuthStore();
     const { showToast } = useToast();
     const {
+        selectedDoc,
+        setSelectedDoc,
         setSelectedDocId,
-        setSelectedDoc: setStoreDoc,
         setAllDocuments,
         pendingCreateFromAI,
         setPendingCreateFromAI,
@@ -26,13 +27,11 @@ export function DocumentEditor() {
         setPendingReplacement,
         setEditorSelection,
     } = useDocumentStore();
-    const storeSelectedDoc = useDocumentStore(s => s.selectedDoc);
     const previewVersion = useVersionStore((state: any) => state.previewVersion);
 
     const { categories, fetchCategories } = useCategoryStore();
 
     const [documents, setDocuments] = useState<any[]>([]);
-    const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [filterGrado, setFilterGrado] = useState<string>('');
     const [filterHoras, setFilterHoras] = useState<string>('');
@@ -70,11 +69,6 @@ export function DocumentEditor() {
         setSelectedDocId(selectedDoc?.id || null);
     }, [selectedDoc, setSelectedDocId]);
 
-    // Sync selectedDoc to store so AiSidebar can read it
-    useEffect(() => {
-        setStoreDoc(selectedDoc);
-    }, [selectedDoc]);
-
     // Sync allDocuments to store so AiSidebar has multi-doc chat context
     useEffect(() => {
         setAllDocuments(documents);
@@ -94,14 +88,19 @@ export function DocumentEditor() {
         }
     }, [pendingReplacement]);
 
+    // Reset content ref when switching documents so we have a baseline for change detection
+    useEffect(() => {
+        lastHandledContentRef.current = selectedDoc?.content;
+    }, [selectedDoc?.id]);
+
     // Detect when AiSidebar inserted content at end of doc (rubric/activities)
     useEffect(() => {
-        if (!storeSelectedDoc || !selectedDoc) return;
-        if (storeSelectedDoc.id === selectedDoc.id && storeSelectedDoc.content !== selectedDoc.content) {
-            handleAutoSave(selectedDoc.id, storeSelectedDoc.content);
-            setSelectedDoc(storeSelectedDoc);
+        if (!selectedDoc || lastHandledContentRef.current === undefined) return;
+        if (selectedDoc.content !== lastHandledContentRef.current) {
+            handleAutoSave(selectedDoc.id, selectedDoc.content);
+            lastHandledContentRef.current = selectedDoc.content;
         }
-    }, [storeSelectedDoc?.content]);
+    }, [selectedDoc?.content]);
 
     // Upload state
     const [uploadType, setUploadType] = useState<'pdf' | 'word' | 'gdoc' | 'editor'>('editor');
@@ -124,6 +123,7 @@ export function DocumentEditor() {
     const [copiedLink, setCopiedLink] = useState(false);
     const [chainViewNodeId, setChainViewNodeId] = useState<string | null>(null);
     const [editorSelectionRange, setEditorSelectionRange] = useState<{ from: number; to: number } | null>(null);
+    const lastHandledContentRef = useRef<string | null | undefined>(undefined);
     const [pendingReplace, setPendingReplace] = useState<{ text: string; from: number; to: number } | null>(null);
     const [confirmModal, setConfirmModal] = useState<{
         title: string;
@@ -598,6 +598,7 @@ export function DocumentEditor() {
         try {
             const { error } = await supabase.from('documents').update({ content: newContent }).eq('id', docId);
             if (error) throw error;
+            lastHandledContentRef.current = newContent;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, content: newContent } : prev);
             setHasUnsavedChanges(true);
         } catch (err) {
