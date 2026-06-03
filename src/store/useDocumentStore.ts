@@ -40,7 +40,13 @@ export const useDocumentStore = create<DocumentState>((set) => ({
     selectedDocId: null,
     setSelectedDocId: (id) => set({ selectedDocId: id }),
     selectedDoc: null,
-    setSelectedDoc: (doc) => set({ selectedDoc: doc }),
+    setSelectedDoc: (doc) => {
+        if (typeof doc === 'function') {
+            set(state => ({ selectedDoc: doc(state.selectedDoc) }));
+        } else {
+            set({ selectedDoc: doc });
+        }
+    },
     allDocuments: [],
     setAllDocuments: (docs) => set({ allDocuments: docs }),
     editorSelection: null,
