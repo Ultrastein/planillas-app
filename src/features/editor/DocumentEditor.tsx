@@ -11,6 +11,7 @@ import { Folder, FolderOpen, Plus, FileText, Search, X, ArrowLeft, Maximize2, Mi
 import React from 'react';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useToast } from '../../components/Toast/useToast';
+import { QUICK_TEMPLATES } from '../../data/templates';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
@@ -111,6 +112,7 @@ export function DocumentEditor() {
     const [fileContent, setFileContent] = useState<string | null>(null);
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [pendingChainFromDocId, setPendingChainFromDocId] = useState<string | null>(null);
+    const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // New states for admin author change and comments
@@ -210,6 +212,22 @@ export function DocumentEditor() {
             let file_url = gdocUrl;
             let content = uploadType === 'word' || uploadType === 'editor' ? fileContent : null;
 
+            // Generate content from AI template if selected
+            if (selectedTemplate && uploadType === 'editor') {
+                const template = QUICK_TEMPLATES.find(t => t.id === selectedTemplate);
+                if (template) {
+                    try {
+                        const { generateFullPlan } = await import('../ai/aiService');
+                        const description = template.prompt + (uploadTitle ? ` Título específico: "${uploadTitle}".` : '');
+                        const generated = await generateFullPlan(description);
+                        if (!uploadTitle) setUploadTitle(generated.title);
+                        content = generated.content;
+                    } catch (e) {
+                        showToast('No se pudo generar con IA, se creará sin contenido.', 'warning');
+                    }
+                }
+            }
+
             if (!content && uploadType === 'editor') {
                 content = null; // Leave blank, content will be edited in the editor
             }
@@ -231,6 +249,7 @@ export function DocumentEditor() {
             if (duplicateByTitle) {
                 setLoading(false);
                 setIsCreating(false);
+                setSelectedTemplate(null);
                 setSelectedDoc(duplicateByTitle);
                 showToast('Ya existe un documento con este título. Te hemos redirigido a la planilla existente.', 'warning'); return;
             }
@@ -246,6 +265,7 @@ export function DocumentEditor() {
                 if (duplicateByContent) {
                     setLoading(false);
                     setIsCreating(false);
+                    setSelectedTemplate(null);
                     setSelectedDoc(duplicateByContent);
                     showToast('Ya existe un documento con este mismo contenido. Te hemos redirigido a la planilla existente.', 'warning'); return;
                 }
@@ -262,6 +282,7 @@ export function DocumentEditor() {
                 if (duplicateByUrl) {
                     setLoading(false);
                     setIsCreating(false);
+                    setSelectedTemplate(null);
                     setSelectedDoc(duplicateByUrl);
                     showToast('Ya existe un documento con este mismo enlace. Te hemos redirigido a la planilla existente.', 'warning'); return;
                 }
@@ -331,6 +352,7 @@ export function DocumentEditor() {
             setFileContent(null);
             setUploadFile(null);
             setGdocUrl('');
+            setSelectedTemplate(null);
             setIsCreating(false); // Close Modal
 
             await fetchDocs();
@@ -1545,11 +1567,11 @@ export function DocumentEditor() {
 
             {/* FLOATING CREATION MODAL */}
             {isCreating && (
-                <div className={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) { setIsCreating(false); setPendingChainFromDocId(null); } }}>
+                <div className={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) { setIsCreating(false); setPendingChainFromDocId(null); setSelectedTemplate(null); } }}>
                     <div className={styles.uploadModal}>
                         <div className={styles.modalHeader}>
                             <h2>{pendingChainFromDocId ? '🔗 Nueva Clase Encadenada' : 'Nueva Clase'}</h2>
-                            <button className={styles.closeBtn} onClick={() => { setIsCreating(false); setPendingChainFromDocId(null); }}>
+                            <button className={styles.closeBtn} onClick={() => { setIsCreating(false); setPendingChainFromDocId(null); setSelectedTemplate(null); }}>
                                 <X size={20} />
                             </button>
                         </div>
@@ -1561,6 +1583,39 @@ export function DocumentEditor() {
                                 onChange={e => setUploadTitle(e.target.value)}
                                 autoFocus
                             />
+                            {/* Template selector — only show for editor type or when none selected yet */}
+                            <div style={{ marginBottom: '12px' }}>
+                                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 8px' }}>
+                                    Partir de una plantilla IA (opcional):
+                                </p>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {QUICK_TEMPLATES.map(t => (
+                                        <button
+                                            key={t.id}
+                                            type="button"
+                                            onClick={() => {
+                                                const next = selectedTemplate === t.id ? null : t.id;
+                                                setSelectedTemplate(next);
+                                                if (next && !uploadTitle) {
+                                                    setUploadTitle(`Clase de ${t.name}`);
+                                                }
+                                            }}
+                                            style={{
+                                                padding: '6px 12px',
+                                                borderRadius: '20px',
+                                                border: `1px solid ${selectedTemplate === t.id ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                                                background: selectedTemplate === t.id ? 'var(--primary-light, #eff6ff)' : 'white',
+                                                cursor: 'pointer',
+                                                fontSize: '0.8rem',
+                                                fontWeight: selectedTemplate === t.id ? 700 : 400,
+                                                color: selectedTemplate === t.id ? 'var(--primary-color)' : 'var(--text-primary)',
+                                            }}
+                                        >
+                                            {t.icon} {t.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                             <select value={uploadType} onChange={(e: any) => setUploadType(e.target.value)}>
                                 <option value="editor">Editor de Texto Integrado</option>
                                 <option value="word">Documento Word (.docx)</option>
