@@ -1,0 +1,53 @@
+<h2>Mejora de texto inline en el editor</h2>
+<p class="subtitle">Cuando el docente selecciona texto, ¿cómo dispara la mejora con IA?</p>
+
+<div class="options">
+  <div class="option" data-choice="floating-toolbar" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Toolbar flotante sobre la selección</h3>
+      <p>Al seleccionar texto aparece una pequeña barra flotante (como en Google Docs) con un botón "✨ Mejorar".</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Editor de texto</div>
+        <div class="mockup-body" style="padding:16px;font-size:0.85rem;position:relative;min-height:80px">
+          <p style="margin:0;line-height:1.8">Los alumnos deberán <span style="background:#bfdbfe;border-radius:2px;padding:1px 0">conectar el led al pin 13 y escribir el código</span> para encenderlo.</p>
+          <!-- Floating toolbar -->
+          <div style="position:absolute;top:8px;left:160px;background:#1e293b;border-radius:6px;padding:4px 8px;display:flex;gap:6px;align-items:center;box-shadow:0 4px 12px rgba(0,0,0,0.3)">
+            <span style="color:white;font-size:0.7rem;font-weight:600;cursor:pointer">✨ Mejorar</span>
+            <span style="color:#94a3b8;font-size:0.7rem;">|</span>
+            <span style="color:#94a3b8;font-size:0.7rem;cursor:pointer">Simplificar</span>
+            <span style="color:#94a3b8;font-size:0.7rem;">|</span>
+            <span style="color:#94a3b8;font-size:0.7rem;cursor:pointer">Expandir</span>
+            <div style="width:6px;height:6px;background:#1e293b;position:absolute;bottom:-3px;left:16px;transform:rotate(45deg)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>A favor</h4><ul><li>Flujo natural, no interrumpe</li><li>Como Google Docs / Notion</li></ul></div>
+        <div class="cons"><h4>En contra</h4><ul><li>Requiere modificar RichTextEditor</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="sidebar-button" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Botón en tab "Mejorar" del sidebar</h3>
+      <p>El docente selecciona texto en el editor, luego hace clic en "Mejorar texto seleccionado" en el sidebar. La IA reemplaza la selección.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Sidebar IA — tab Mejorar</div>
+        <div class="mockup-body" style="padding:12px;font-size:0.8rem">
+          <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:8px;margin-bottom:10px;font-size:0.75rem;color:#92400e">
+            <strong>Texto seleccionado:</strong><br/>
+            "conectar el led al pin 13 y escribir el código"
+          </div>
+          <button class="mock-button" style="background:#3b82f6;color:white;border:none;padding:8px 12px;border-radius:6px;font-size:0.78rem;width:100%">✨ Mejorar texto seleccionado</button>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>A favor</h4><ul><li>Más simple de implementar</li><li>Sin modificar el editor</li></ul></div>
+        <div class="cons"><h4>En contra</h4><ul><li>Requiere ir al sidebar</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,50 @@
+<h2>¿Cómo organizamos todas las mejoras?</h2>
+<p class="subtitle">Son bastantes features. Proponemos 3 fases independientes. ¿Coincidís con este orden o querés cambiarlo?</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="fase1" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Base sólida — Salud del código</h3>
+      <p>Eliminar credenciales hardcodeadas (seguridad), reemplazar window.alert/confirm por toasts, dividir DocumentEditor.tsx (~1450 líneas) en componentes más pequeños. Sin esto, las fases 2 y 3 se construyen sobre arena.</p>
+      <ul style="margin-top:10px;padding-left:20px;color:#64748b;font-size:0.85rem">
+        <li>Remover botón "Acceso Rápido (Pruebas IA)"</li>
+        <li>Sistema de notificaciones tipo toast</li>
+        <li>Extraer ModalCreacion, PanelMetadata, SeccionComentarios</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="fase2" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Funcionalidades UX — Productividad docente</h3>
+      <p>Features que no dependen de IA y mejoran el flujo diario del docente con la aplicación.</p>
+      <ul style="margin-top:10px;padding-left:20px;color:#64748b;font-size:0.85rem">
+        <li>Exportar planilla a PDF desde el editor</li>
+        <li>Duplicar clase (clonar como base)</li>
+        <li>Plantillas predefinidas por materia</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="fase3" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>IA avanzada — El docente tiene un asistente</h3>
+      <p>Todas las features de IA que usan Gemini para hacerle la vida más fácil al docente.</p>
+      <ul style="margin-top:10px;padding-left:20px;color:#64748b;font-size:0.85rem">
+        <li>Generador de planificación completa desde descripción</li>
+        <li>Mejora de texto inline en el editor</li>
+        <li>Generador de rúbricas de evaluación</li>
+        <li>Sugeridor de actividades complementarias</li>
+        <li>Chat multi-documento</li>
+        <li>Resumen ejecutivo auto-generado</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:24px;padding:16px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe">
+  <p style="margin:0;font-size:0.9rem;color:#1d4ed8"><strong>Nota:</strong> Podés seleccionar las fases que querés incluir (o todas). El orden propuesto permite que cada fase sea estable antes de construir la siguiente. Decime si querés cambiar el orden o saltear alguna.</p>
+</div>
