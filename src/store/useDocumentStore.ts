@@ -1,16 +1,19 @@
 import { create } from 'zustand';
+import type { Document } from '../types/document';
 
-interface PendingCreateFromAI {
+export interface PendingCreateFromAIMetadata {
+    curso?: string;
+    grado?: string;
+    anio?: string;
+    carga_horaria?: string;
+    tematica?: string;
+    num_clase?: string;
+}
+
+export interface PendingCreateFromAI {
     title: string;
     content: string;
-    metadata: {
-        curso?: string;
-        grado?: string;
-        anio?: string;
-        carga_horaria?: string;
-        tematica?: string;
-        num_clase?: string;
-    };
+    metadata: PendingCreateFromAIMetadata;
 }
 
 interface EditorSelection {
@@ -22,10 +25,10 @@ interface EditorSelection {
 interface DocumentState {
     selectedDocId: string | null;
     setSelectedDocId: (id: string | null) => void;
-    selectedDoc: any | null;
-    setSelectedDoc: (doc: any | null) => void;
-    allDocuments: any[];
-    setAllDocuments: (docs: any[]) => void;
+    selectedDoc: Document | null;
+    setSelectedDoc: (doc: Document | null | ((prev: Document | null) => Document | null)) => void;
+    allDocuments: Document[];
+    setAllDocuments: (docs: Document[]) => void;
     editorSelection: EditorSelection | null;
     setEditorSelection: (sel: EditorSelection | null) => void;
     pendingReplacement: { text: string; from: number; to: number } | null;

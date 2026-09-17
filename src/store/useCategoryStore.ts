@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { getErrorMessage } from '../lib/errors';
 
 export interface ThematicCategory {
     id: string;
@@ -28,9 +29,9 @@ export const useCategoryStore = create<CategoryState>((set) => ({
 
             if (error) throw error;
             set({ categories: data || [], loading: false });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching categories:', err);
-            set({ error: err.message, loading: false });
+            set({ error: getErrorMessage(err), loading: false });
         }
     }
 }));

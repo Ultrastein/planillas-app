@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Sparkles, Hammer, ShieldAlert, Package, Send } from 'lucide-react';
 import { useDocumentStore } from '../../store/useDocumentStore';
 import { useToast } from '../../components/Toast/useToast';
+import { getErrorMessage } from '../../lib/errors';
 import {
     analyzeDocumentContent,
     askGeminiQuestion,
@@ -92,8 +93,8 @@ export function AiSidebar() {
             const result = await generateFullPlan(generatorPrompt.trim());
             setPendingCreateFromAI(result);
             setGeneratorPrompt('');
-        } catch (e: any) {
-            showToast('Error generando planificación: ' + e.message, 'error');
+        } catch (e: unknown) {
+            showToast('Error generando planificación: ' + getErrorMessage(e), 'error');
         } finally {
             setGeneratorLoading(false);
         }
@@ -106,8 +107,8 @@ export function AiSidebar() {
             const result = await analyzeDocumentContent(selectedDoc.content, selectedDoc.title);
             setAnalyzeMetadata(result.metadata);
             setAnalyzeRequirements(result.requirements);
-        } catch (e: any) {
-            showToast('Error analizando: ' + e.message, 'error');
+        } catch (e: unknown) {
+            showToast('Error analizando: ' + getErrorMessage(e), 'error');
         } finally {
             setAnalyzeLoading(false);
         }
@@ -119,8 +120,8 @@ export function AiSidebar() {
         try {
             const result = await generateExecutiveSummary(selectedDoc.content, selectedDoc.title);
             setSummaryResult(result);
-        } catch (e: any) {
-            showToast('Error generando resumen: ' + e.message, 'error');
+        } catch (e: unknown) {
+            showToast('Error generando resumen: ' + getErrorMessage(e), 'error');
         } finally {
             setSummaryLoading(false);
         }
@@ -132,8 +133,8 @@ export function AiSidebar() {
         try {
             const result = await generateRubric(selectedDoc.content, selectedDoc.title);
             setRubricsResult(result);
-        } catch (e: any) {
-            showToast('Error generando rúbrica: ' + e.message, 'error');
+        } catch (e: unknown) {
+            showToast('Error generando rúbrica: ' + getErrorMessage(e), 'error');
         } finally {
             setRubricsLoading(false);
         }
@@ -145,8 +146,8 @@ export function AiSidebar() {
         try {
             const result = await suggestActivities(selectedDoc.content, selectedDoc.title);
             setActivitiesResult(result);
-        } catch (e: any) {
-            showToast('Error sugiriendo actividades: ' + e.message, 'error');
+        } catch (e: unknown) {
+            showToast('Error sugiriendo actividades: ' + getErrorMessage(e), 'error');
         } finally {
             setActivitiesLoading(false);
         }
@@ -162,8 +163,8 @@ export function AiSidebar() {
         try {
             const result = await improveText(capturedText);
             setPendingReplacement({ text: result, from: capturedFrom, to: capturedTo });
-        } catch (e: any) {
-            showToast('Error mejorando texto: ' + e.message, 'error');
+        } catch (e: unknown) {
+            showToast('Error mejorando texto: ' + getErrorMessage(e), 'error');
         } finally {
             setImproveLoading(false);
         }
@@ -189,8 +190,8 @@ export function AiSidebar() {
         try {
             const aiResponse = await askGeminiQuestion(docContent, q, globalContext);
             setChatLog(prev => [...prev, { role: 'ai', text: aiResponse }]);
-        } catch (e: any) {
-            setChatLog(prev => [...prev, { role: 'ai', text: 'Error al consultar la IA: ' + (e.message || 'Error desconocido') }]);
+        } catch (e: unknown) {
+            setChatLog(prev => [...prev, { role: 'ai', text: 'Error al consultar la IA: ' + getErrorMessage(e) }]);
         } finally {
             setChatLoading(false);
         }
