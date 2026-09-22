@@ -161,6 +161,20 @@ create policy "Everyone can insert comments"
   to authenticated
   with check ( author_id = auth.uid() );
 
+DROP POLICY IF EXISTS "Authors can update their own comments" ON public.comments;
+DROP POLICY IF EXISTS "Authors or admins can delete comments" ON public.comments;
+
+create policy "Authors can update their own comments"
+  on public.comments for update
+  to authenticated
+  using ( author_id = auth.uid() )
+  with check ( author_id = auth.uid() );
+
+create policy "Authors or admins can delete comments"
+  on public.comments for delete
+  to authenticated
+  using ( author_id = auth.uid() OR coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );
+
 -- 4. Admin RPC to change other users passwords
 -- NOTE: Requires setup through Supabase Dashboard -> Database -> Functions
 create or replace function admin_reset_user_password(target_user_id uuid, new_password text)
@@ -200,6 +214,14 @@ create policy "Versions viewable by all authenticated users"
 
 create policy "Titulares and Admins can insert versions"
   on document_versions for insert to authenticated with check ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) IN ('admin', 'titular') );
+
+-- Versions are immutable once created (no UPDATE policy). Only admins may delete them.
+DROP POLICY IF EXISTS "Admins can delete document versions" ON public.document_versions;
+
+create policy "Admins can delete document versions"
+  on public.document_versions for delete
+  to authenticated
+  using ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );
 
 -- 6. Create Navigation Tabs Table (Dynamic Sidebar Menu)
 CREATE TABLE IF NOT EXISTS public.navigation_tabs (
@@ -249,3 +271,34 @@ create policy "Categories viewable by all authenticated users"
 
 create policy "Admins and Titulares can manage categories"
   on thematic_categories for all to authenticated using ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) IN ('admin', 'titular') );
+
+-- 8. Create Feedback Table (bug reports / suggestions from users)
+CREATE TABLE IF NOT EXISTS public.feedback (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users(id) not null,
+  type text not null check (type in ('bug', 'suggestion')),
+  description text not null,
+  status text not null default 'pendiente' check (status in ('pendiente', 'en_revision', 'resuelto', 'descartado')),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.feedback enable row level security;
+
+DROP POLICY IF EXISTS "Users can insert their own feedback" ON public.feedback;
+DROP POLICY IF EXISTS "Admins can view feedback" ON public.feedback;
+DROP POLICY IF EXISTS "Admins can update feedback" ON public.feedback;
+
+create policy "Users can insert their own feedback"
+  on public.feedback for insert
+  to authenticated
+  with check ( user_id = auth.uid() );
+
+create policy "Admins can view feedback"
+  on public.feedback for select
+  to authenticated
+  using ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );
+
+create policy "Admins can update feedback"
+  on public.feedback for update
+  to authenticated
+  using ( coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), public.get_user_role()) = 'admin' );

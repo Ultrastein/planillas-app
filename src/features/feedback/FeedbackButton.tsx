@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../components/Toast/useToast';
 import styles from './FeedbackButton.module.css';
 
 export function FeedbackButton() {
     const { user } = useAuthStore();
+    const { showToast } = useToast();
     const [isOpen, setIsOpen] = useState(false);
     const [type, setType] = useState<'bug' | 'suggestion'>('bug');
     const [description, setDescription] = useState('');
@@ -13,21 +15,20 @@ export function FeedbackButton() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!description.trim()) return;
+        if (!description.trim() || !user?.id) return;
 
         setStatus('submitting');
         try {
-            // Note: the backend integration should match `feedback` schema
-            // feedback: id, user_id, type, description, created_at
             const { error } = await supabase.from('feedback').insert({
-                user_id: user?.id,
+                user_id: user.id,
                 type,
                 description
             });
 
             if (error) {
-                // Silently fail for mockup purposes if table doesn't exist, but report to UI
-                console.warn('Feedback mock insert failed:', error);
+                setStatus('error');
+                showToast('No se pudo enviar el feedback. Intentá nuevamente.', 'error');
+                return;
             }
 
             setStatus('success');
@@ -36,8 +37,9 @@ export function FeedbackButton() {
                 setStatus('idle');
                 setDescription('');
             }, 2000);
-        } catch (err) {
+        } catch {
             setStatus('error');
+            showToast('No se pudo enviar el feedback. Intentá nuevamente.', 'error');
         }
     };
 
