@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 .env
+.env.*
+!.env.example
 
 # Claude Code local session state (agent worktrees, etc.)
 .claude/
