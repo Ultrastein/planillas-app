@@ -2,7 +2,10 @@ import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
 // Supabase mock
-vi.mock('../../lib/supabase', () => ({
+// NOTA: el path acá se resuelve relativo a ESTE archivo (src/setupTests.ts),
+// no relativo a cada módulo que importa '../../lib/supabase' (ej. desde
+// src/features/admin/). Por eso es './lib/supabase' y no '../../lib/supabase'.
+vi.mock('./lib/supabase', () => ({
     supabase: {
         from: vi.fn(() => ({
             select: vi.fn().mockReturnThis(),
@@ -18,6 +21,9 @@ vi.mock('../../lib/supabase', () => ({
         auth: {
             getSession: vi.fn(),
             onAuthStateChange: vi.fn(),
-        }
+        },
+        functions: {
+            invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+        },
     }
 }));

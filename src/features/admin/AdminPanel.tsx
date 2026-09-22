@@ -1,22 +1,36 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { supabaseAdmin } from '../../lib/supabaseAdmin';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useAuthStore, type UserProfile } from '../../store/useAuthStore';
+import type { Document } from '../../types/document';
 import styles from './AdminPanel.module.css';
 import { Shield, KeyRound, UserPlus, Trash2, Users, List, PlusCircle, Trash, Folder } from 'lucide-react';
 
+interface NavigationTab {
+    id: string;
+    label: string;
+    path: string;
+    order_index: number;
+    created_at: string;
+}
+
+interface ThematicCategory {
+    id: string;
+    name: string;
+    created_at?: string;
+}
+
 export function AdminPanel() {
     const { profile: currentUser } = useAuthStore();
-    const [users, setUsers] = useState<any[]>([]);
-    const [deletedDocs, setDeletedDocs] = useState<any[]>([]);
+    const [users, setUsers] = useState<UserProfile[]>([]);
+    const [deletedDocs, setDeletedDocs] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'users' | 'trash' | 'navigation' | 'categories'>('users');
-    const [navTabs, setNavTabs] = useState<any[]>([]);
+    const [navTabs, setNavTabs] = useState<NavigationTab[]>([]);
     const [newTabLabel, setNewTabLabel] = useState('');
     const [newTabPath, setNewTabPath] = useState('/editor');
 
-    const [categories, setCategories] = useState<any[]>([]);
+    const [categories, setCategories] = useState<ThematicCategory[]>([]);
     const [newCategoryName, setNewCategoryName] = useState('');
 
     // Form State
@@ -53,8 +67,8 @@ export function AdminPanel() {
                 if (error) throw error;
                 setCategories(data || []);
             }
-        } catch (err: any) {
-            setError('Error al cargar datos: ' + err.message);
+        } catch (err) {
+            setError('Error al cargar datos: ' + (err instanceof Error ? err.message : String(err)));
         } finally {
             setLoading(false);
         }
@@ -64,33 +78,26 @@ export function AdminPanel() {
         e.preventDefault();
         setError(null);
         try {
-            if (!import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
-                alert('Atención: VITE_SUPABASE_SERVICE_ROLE_KEY no está configurada, la creación en auth.users fallará o no será posible. Intenta configurarla en el .env');
-            }
-
-            // Crear usuario en Auth (usando admin API para no afectar sesión local)
-            const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-                email: newUserEmail,
-                password: newUserPwd,
-                email_confirm: true,
-                user_metadata: { name: newUserName }
+            // La creación de usuarios en auth.users requiere la Service Role Key,
+            // que sólo existe del lado del servidor: se delega en la Edge Function.
+            const { error: fnError } = await supabase.functions.invoke('admin-actions', {
+                body: {
+                    action: 'create_user',
+                    payload: {
+                        email: newUserEmail,
+                        password: newUserPwd,
+                        name: newUserName,
+                        role: newUserRole,
+                    },
+                },
             });
-
-            if (authError) throw authError;
-
-            // Update en public.users para fijar el rol (el trigger de Supabase hace el insert por defecto como colaborador)
-            if (authData.user) {
-                const { error: dbError } = await supabase.from('users').update({
-                    role: newUserRole
-                }).eq('id', authData.user.id);
-                if (dbError) throw dbError;
-            }
+            if (fnError) throw fnError;
 
             setShowCreateForm(false);
             setNewUserEmail(''); setNewUserName(''); setNewUserPwd('');
             fetchData();
-        } catch (err: any) {
-            setError(err.message || 'Error al crear usuario');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error al crear usuario');
         }
     };
 
@@ -100,24 +107,23 @@ export function AdminPanel() {
         if (!selectedUserForPwd) return;
 
         try {
-            // Utilizamos el RPC en caso no haya Service Role Key, o supabaseAdmin si la hay.
-            if (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
-                const { error } = await supabaseAdmin.auth.admin.updateUserById(selectedUserForPwd, { password: newPasswordForUser });
-                if (error) throw error;
-            } else {
-                const { error } = await supabase.rpc('admin_reset_user_password', {
-                    target_user_id: selectedUserForPwd,
-                    new_password: newPasswordForUser
-                });
-                if (error) throw error;
-            }
+            const { error: fnError } = await supabase.functions.invoke('admin-actions', {
+                body: {
+                    action: 'reset_password',
+                    payload: {
+                        target_user_id: selectedUserForPwd,
+                        new_password: newPasswordForUser,
+                    },
+                },
+            });
+            if (fnError) throw fnError;
 
             setSelectedUserForPwd(null);
             setNewPasswordForUser('');
             alert("Contraseña actualizada exitosamente.");
             fetchData();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error al cambiar contraseña');
         }
     };
 
@@ -127,8 +133,8 @@ export function AdminPanel() {
             if (error) throw error;
             alert("Rol actualizado correctamente.");
             fetchData();
-        } catch (err: any) {
-            setError('Error al actualizar rol: ' + err.message);
+        } catch (err) {
+            setError('Error al actualizar rol: ' + (err instanceof Error ? err.message : String(err)));
         }
     };
 
@@ -148,8 +154,8 @@ export function AdminPanel() {
             setNewTabLabel('');
             setNewTabPath('/editor');
             fetchData();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error inesperado');
         }
     };
 
@@ -158,8 +164,8 @@ export function AdminPanel() {
             const { error } = await supabase.from('navigation_tabs').delete().eq('id', id);
             if (error) throw error;
             fetchData();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error inesperado');
         }
     };
 
@@ -173,8 +179,8 @@ export function AdminPanel() {
             if (error) throw error;
             setNewCategoryName('');
             fetchData();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error inesperado');
         }
     };
 
@@ -183,8 +189,8 @@ export function AdminPanel() {
             const { error } = await supabase.from('thematic_categories').delete().eq('id', id);
             if (error) throw error;
             fetchData();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error inesperado');
         }
     };
 
@@ -193,8 +199,8 @@ export function AdminPanel() {
             const { error } = await supabase.from('documents').update({ status: 'active', delete_reason: null }).eq('id', id);
             if (error) throw error;
             fetchData();
-        } catch (err: any) {
-            setError('Error restaurando: ' + err.message);
+        } catch (err) {
+            setError('Error restaurando: ' + (err instanceof Error ? err.message : String(err)));
         }
     };
 
@@ -208,8 +214,8 @@ export function AdminPanel() {
             const { error } = await supabase.from('documents').delete().eq('id', id);
             if (error) throw error;
             fetchData();
-        } catch (err: any) {
-            setError('Error eliminando: ' + err.message);
+        } catch (err) {
+            setError('Error eliminando: ' + (err instanceof Error ? err.message : String(err)));
         }
     };
 
@@ -276,7 +282,7 @@ export function AdminPanel() {
                             </div>
                             <div className={styles.formRow}>
                                 <input required type="password" placeholder="Contraseña Inicial" value={newUserPwd} onChange={e => setNewUserPwd(e.target.value)} />
-                                <select value={newUserRole} onChange={e => setNewUserRole(e.target.value as any)}>
+                                <select value={newUserRole} onChange={e => setNewUserRole(e.target.value as 'titular' | 'colaborador' | 'admin')}>
                                     <option value="titular">Docente Titular (Editor)</option>
                                     <option value="colaborador">Docente Visualizador (Lector)</option>
                                     <option value="admin">Administrador</option>
@@ -332,7 +338,7 @@ export function AdminPanel() {
                                         <td>
                                             <select
                                                 value={u.role}
-                                                onChange={(e) => handleUpdateUserRole(u.id, e.target.value as any)}
+                                                onChange={(e) => handleUpdateUserRole(u.id, e.target.value as 'admin' | 'titular' | 'colaborador')}
                                                 disabled={u.id === currentUser?.id}
                                                 style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
                                                 title={u.id === currentUser?.id ? "No puedes cambiar tu propio rol" : "Cambiar rol del usuario"}

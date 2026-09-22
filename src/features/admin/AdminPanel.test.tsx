@@ -6,17 +6,35 @@ import { supabase } from '../../lib/supabase';
 
 // Mock Lucide icons to avoid jsdom render issues with SVG
 vi.mock('lucide-react', () => ({
-    Users: () => <div>Users</div>,
     Shield: () => <div>Shield</div>,
     KeyRound: () => <div>KeyRound</div>,
     UserPlus: () => <div>UserPlus</div>,
+    Trash2: () => <div>Trash2</div>,
+    Users: () => <div>Users</div>,
+    List: () => <div>List</div>,
+    PlusCircle: () => <div>PlusCircle</div>,
+    Trash: () => <div>Trash</div>,
+    Folder: () => <div>Folder</div>,
 }));
 
-describe('AdminPanel Master Control', () => {
+const mockUsersData = [
+    { id: '1', name: 'Admin User', email: 'admin@edu.ar', role: 'admin', auth_provider: 'local' },
+    { id: '99', name: 'Pepe', email: 'pepe@edu.ar', role: 'colaborador', auth_provider: 'local' },
+];
+
+describe('AdminPanel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        // Reset supabase mock defaults
-        supabase.rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+
+        // Reset supabase mocks with a sensible default: 'users' tab data load.
+        supabase.from = vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({ data: mockUsersData, error: null }),
+            update: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+        });
+        supabase.functions.invoke = vi.fn().mockResolvedValue({ data: { success: true }, error: null });
     });
 
     it('declines access if user is not admin', () => {
@@ -35,98 +53,78 @@ describe('AdminPanel Master Control', () => {
 
         render(<AdminPanel />);
 
-        expect(screen.getByText('Master Control')).toBeInTheDocument();
+        expect(screen.getByText('Panel de Administrador')).toBeInTheDocument();
+        await waitFor(() => {
+            expect(screen.getByText('Admin User')).toBeInTheDocument();
+        });
     });
 
-    it('opens create user form and submits', async () => {
+    it('creates a user via the admin-actions Edge Function', async () => {
         useAuthStore.setState({
             profile: { id: '1', email: 'admin@edu.ar', name: 'Admin', role: 'admin', auth_provider: 'local' },
         });
 
-        // Mock successful signup
-        supabase.auth.signUp = vi.fn().mockResolvedValue({
-            data: { user: { id: '3' } },
-            error: null
-        });
-
-        // Mock successful db insert
-        const mockInsert = vi.fn().mockResolvedValue({ error: null });
-        // Override the global mock just for this test
-        supabase.from = vi.fn().mockImplementation((table) => {
-            if (table === 'users') {
-                return {
-                    select: vi.fn().mockReturnThis(),
-                    order: vi.fn().mockResolvedValue({ data: [], error: null }),
-                    insert: mockInsert,
-                };
-            }
-        });
-
         render(<AdminPanel />);
 
-        // Click New User
+        await waitFor(() => {
+            expect(screen.getByText('Admin User')).toBeInTheDocument();
+        });
+
+        // Abrir el formulario de creación
         fireEvent.click(screen.getByText(/Nuevo Usuario/i));
 
-        // Fill form
+        // Completar el formulario
         fireEvent.change(screen.getByPlaceholderText('Nombre Completo'), { target: { value: 'Nuevo Docente' } });
-        fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'nuevo@edu.ar' } });
+        fireEvent.change(screen.getByPlaceholderText('Email o Usuario'), { target: { value: 'nuevo@edu.ar' } });
         fireEvent.change(screen.getByPlaceholderText('Contraseña Inicial'), { target: { value: '123456' } });
 
         fireEvent.click(screen.getByText('Crear'));
 
         await waitFor(() => {
-            expect(supabase.auth.signUp).toHaveBeenCalledWith({
-                email: 'nuevo@edu.ar',
-                password: '123456',
-                options: { data: { full_name: 'Nuevo Docente' } }
+            expect(supabase.functions.invoke).toHaveBeenCalledWith('admin-actions', {
+                body: {
+                    action: 'create_user',
+                    payload: {
+                        email: 'nuevo@edu.ar',
+                        password: '123456',
+                        name: 'Nuevo Docente',
+                        role: 'colaborador',
+                    },
+                },
             });
-            expect(mockInsert).toHaveBeenCalled();
         });
     });
 
-    it('allows changing a users password', async () => {
+    it('resets a user password via the admin-actions Edge Function', async () => {
         useAuthStore.setState({
             profile: { id: '1', email: 'admin@edu.ar', name: 'Admin', role: 'admin', auth_provider: 'local' },
         });
 
-        // Override fetch mock to return a user to click
-        const mockSelect = vi.fn().mockReturnThis();
-        const mockOrder = vi.fn().mockResolvedValue({
-            data: [{ id: '99', name: 'Pepe', email: 'pepe@edu.ar', role: 'colaborador' }],
-            error: null
-        });
-
-        // Use mockClear so we don't interfere with the global mock object
-        // We redefine it completely for this test block
-        supabase.from = vi.fn().mockReturnValue({
-            select: mockSelect,
-            order: mockOrder
-        });
-
-        // Mock window alert
         const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => { });
 
         render(<AdminPanel />);
 
-        // Wait for users to load
         await waitFor(() => {
             expect(screen.getByText('Pepe')).toBeInTheDocument();
         });
 
-        // Click change password button (KeyRound mocked icon parent)
+        // Ambos usuarios son locales y muestran el botón; el de Pepe es el segundo (id '99').
         const btns = screen.getAllByTitle('Cambiar Contraseña');
-        fireEvent.click(btns[0]);
+        fireEvent.click(btns[1]);
 
-        // Fill new password
         fireEvent.change(screen.getByPlaceholderText('Nueva Contraseña'), { target: { value: 'newpass123' } });
 
-        // Submit
         fireEvent.click(screen.getByText('Forzar Cambio'));
 
         await waitFor(() => {
-            expect(supabase.rpc).toHaveBeenCalledWith('admin_reset_user_password', {
-                target_user_id: '99',
-                new_password: 'newpass123'
+            expect(supabase.functions.invoke).toHaveBeenCalledWith('admin-actions', {
+                body: {
+                    action: 'reset_password',
+                    payload: {
+                        target_user_id: '99',
+                        new_password: 'newpass123',
+                    },
+                },
             });
             expect(alertMock).toHaveBeenCalledWith('Contraseña actualizada exitosamente.');
         });
