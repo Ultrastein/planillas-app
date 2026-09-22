@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useDocumentStore } from './useDocumentStore';
+import { makeDocument } from '../test/fixtures';
 
 describe('useDocumentStore', () => {
     beforeEach(() => {
@@ -15,13 +16,13 @@ describe('useDocumentStore', () => {
     });
 
     it('sets selectedDoc correctly', () => {
-        const doc = { id: '1', title: 'Test' };
+        const doc = makeDocument({ id: '1', title: 'Test' });
         useDocumentStore.getState().setSelectedDoc(doc);
         expect(useDocumentStore.getState().selectedDoc).toEqual(doc);
     });
 
     it('sets allDocuments correctly', () => {
-        const docs = [{ id: '1' }, { id: '2' }];
+        const docs = [makeDocument({ id: '1' }), makeDocument({ id: '2' })];
         useDocumentStore.getState().setAllDocuments(docs);
         expect(useDocumentStore.getState().allDocuments).toHaveLength(2);
     });

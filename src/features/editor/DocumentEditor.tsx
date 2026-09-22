@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
+import type { UserProfile } from '../../store/useAuthStore';
 import { useDocumentStore } from '../../store/useDocumentStore';
 import { supabase } from '../../lib/supabase';
 import { useVersionStore } from '../../store/useVersionStore';
@@ -12,6 +13,9 @@ import React from 'react';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useToast } from '../../components/Toast/useToast';
 import { QUICK_TEMPLATES } from '../../data/templates';
+import { getErrorMessage } from '../../lib/errors';
+import type { Document, NewDocument, DocumentComment } from '../../types/document';
+import type { PendingCreateFromAIMetadata } from '../../store/useDocumentStore';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
@@ -27,11 +31,11 @@ export function DocumentEditor() {
         setPendingReplacement,
         setEditorSelection,
     } = useDocumentStore();
-    const previewVersion = useVersionStore((state: any) => state.previewVersion);
+    const previewVersion = useVersionStore((state) => state.previewVersion);
 
     const { categories, fetchCategories } = useCategoryStore();
 
-    const [documents, setDocuments] = useState<any[]>([]);
+    const [documents, setDocuments] = useState<Document[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [filterGrado, setFilterGrado] = useState<string>('');
     const [filterHoras, setFilterHoras] = useState<string>('');
@@ -115,8 +119,8 @@ export function DocumentEditor() {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // New states for admin author change and comments
-    const [allUsers, setAllUsers] = useState<any[]>([]);
-    const [comments, setComments] = useState<any[]>([]);
+    const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+    const [comments, setComments] = useState<DocumentComment[]>([]);
     const [newCommentText, setNewCommentText] = useState('');
     const [showComments, setShowComments] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -195,7 +199,7 @@ export function DocumentEditor() {
                 try {
                     const result = await mammoth.extractRawText({ arrayBuffer });
                     setFileContent(result.value); // extracted text for preview
-                } catch (err) {
+                } catch {
                     showToast('Error leyendo el archivo Word para previsualización', 'error');
                 }
             };
@@ -221,7 +225,7 @@ export function DocumentEditor() {
                         const generated = await generateFullPlan(description);
                         if (!uploadTitle) setUploadTitle(generated.title);
                         content = generated.content;
-                    } catch (e) {
+                    } catch {
                         showToast('No se pudo generar con IA, se creará sin contenido.', 'warning');
                     }
                 }
@@ -291,7 +295,6 @@ export function DocumentEditor() {
             // Upload physical file if it's PDF or Word
             if (uploadFile && (uploadType === 'pdf' || uploadType === 'word')) {
                 try {
-                    console.log("Starting file upload to storage...");
                     const fileExt = uploadFile.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
                     const filePath = `archivos/${fileName}`;
@@ -310,14 +313,13 @@ export function DocumentEditor() {
                         .getPublicUrl(filePath);
 
                     file_url = publicUrlData.publicUrl;
-                    console.log("File uploaded, url:", file_url);
-                } catch (e: any) {
+                } catch (e: unknown) {
                     console.error("Exception during file upload step:", e);
-                    throw new Error(`Error subiendo archivo: ${e.message}`);
+                    throw new Error(`Error subiendo archivo: ${getErrorMessage(e)}`);
                 }
             }
 
-            const newDoc = {
+            const newDoc: NewDocument = {
                 title: uploadTitle,
                 author_id: user.id,
                 author_name: user.name,
@@ -331,14 +333,12 @@ export function DocumentEditor() {
                 status: 'active'
             };
 
-            console.log("Doing insert to documents table...", newDoc);
             const { data, error } = await supabase.from('documents').insert(newDoc).select().single();
             if (error) {
                 console.error("Database insert error:", error);
                 throw new Error(`DB Insert Error: ${error.message}`);
             }
 
-            console.log("Document inserted, id:", data.id);
             if (creationNumClase) {
                 // Determine if we need to shift other classes for the newly inserted document
                 await handleClassNumberShift(data.id, uploadCategory, uploadTitle, creationNumClase);
@@ -362,9 +362,9 @@ export function DocumentEditor() {
                 await handleUpdateNextClass(pendingChainFromDocId, data.id);
                 setPendingChainFromDocId(null);
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Detailed handleSaveDocument error:", err);
-            showToast('Error al guardar documento: ' + err.message, 'error');
+            showToast('Error al guardar documento: ' + getErrorMessage(err), 'error');
         } finally {
             setLoading(false);
         }
@@ -403,8 +403,8 @@ export function DocumentEditor() {
                     setHasUnsavedChanges(false);
                     fetchDocs();
                     showToast('Planificación eliminada.', 'success');
-                } catch (err: any) {
-                    showToast('Error eliminando: ' + err.message, 'error');
+                } catch (err: unknown) {
+                    showToast('Error eliminando: ' + getErrorMessage(err), 'error');
                 }
             },
         });
@@ -435,8 +435,8 @@ export function DocumentEditor() {
                         showToast('La papelera ya está vacía.', 'info');
                     }
                     fetchDocs();
-                } catch (err: any) {
-                    showToast('Error vaciando la papelera: ' + err.message, 'error');
+                } catch (err: unknown) {
+                    showToast('Error vaciando la papelera: ' + getErrorMessage(err), 'error');
                 } finally {
                     setLoading(false);
                 }
@@ -481,9 +481,9 @@ export function DocumentEditor() {
             setShowBulkImport(false);
             await fetchDocs();
             showToast(`¡Se importaron ${newDocs.length} clases correctamente!`, 'success');
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Detailed handleBulkImport error:", err);
-            showToast('Error al importar JSON: ' + err.message, 'error');
+            showToast('Error al importar JSON: ' + getErrorMessage(err), 'error');
         } finally {
             setLoading(false);
         }
@@ -493,11 +493,11 @@ export function DocumentEditor() {
         try {
             const { error } = await supabase.from('documents').update({ tematica: newCategory || null }).eq('id', docId);
             if (error) throw error;
-            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, tematica: newCategory || null } : prev);
+            setSelectedDoc((prev) => prev?.id === docId ? { ...prev, tematica: newCategory || null } : prev);
             setHasUnsavedChanges(true);
             fetchDocs();
-        } catch (err: any) {
-            showToast('Error al actualizar temática: ' + err.message, 'error');
+        } catch (err: unknown) {
+            showToast('Error al actualizar temática: ' + getErrorMessage(err), 'error');
         }
     };
 
@@ -507,15 +507,15 @@ export function DocumentEditor() {
             if (error) throw error;
 
             // Si el documento seleccionado actualmente es el que se actualizó (raro pero posible)
-            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, next_class_id: nextClassId || null } : prev);
+            setSelectedDoc((prev) => prev?.id === docId ? { ...prev, next_class_id: nextClassId || null } : prev);
 
             // Actualizar arreglo local instantáneamente sin llamar a fetchDocs para evitar overwrites (race condition)
-            setDocuments((prev: any[]) => prev.map(d => d.id === docId ? { ...d, next_class_id: nextClassId || null } : d));
+            setDocuments((prev) => prev.map(d => d.id === docId ? { ...d, next_class_id: nextClassId || null } : d));
 
             setHasUnsavedChanges(true);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error al guardar siguiente clase:', err);
-            showToast('No se pudo guardar el encadenado. Asegúrese de que la columna "next_class_id" existe en la tabla documents de Supabase. Err: ' + err.message, 'error');
+            showToast('No se pudo guardar el encadenado. Asegúrese de que la columna "next_class_id" existe en la tabla documents de Supabase. Err: ' + getErrorMessage(err), 'error');
         }
     };
 
@@ -573,11 +573,11 @@ export function DocumentEditor() {
 
             const { error } = await supabase.from('documents').update({ num_clase: newNum || null }).eq('id', docId);
             if (error) throw error;
-            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, num_clase: newNum || null } : prev);
+            setSelectedDoc((prev) => prev?.id === docId ? { ...prev, num_clase: newNum || null } : prev);
             setHasUnsavedChanges(true);
             fetchDocs();
-        } catch (err: any) {
-            showToast('Error al guardar número de clase: ' + err.message, 'error');
+        } catch (err: unknown) {
+            showToast('Error al guardar número de clase: ' + getErrorMessage(err), 'error');
         }
     };
 
@@ -585,20 +585,20 @@ export function DocumentEditor() {
         try {
             const { error } = await supabase.from('documents').update({ [field]: value || null }).eq('id', docId);
             if (error) throw error;
-            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, [field]: value || null } : prev);
+            setSelectedDoc((prev) => prev?.id === docId ? { ...prev, [field]: value || null } : prev);
             setHasUnsavedChanges(true);
             fetchDocs();
-        } catch (err: any) {
-            showToast(`Error al guardar ${field}: ` + err.message, 'error');
+        } catch (err: unknown) {
+            showToast(`Error al guardar ${field}: ` + getErrorMessage(err), 'error');
         }
     };
 
-    const handleAutoSave = async (docId: string, newContent: string) => {
+    const handleAutoSave = async (docId: string, newContent: string | null) => {
         try {
             const { error } = await supabase.from('documents').update({ content: newContent }).eq('id', docId);
             if (error) throw error;
             lastHandledContentRef.current = newContent;
-            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, content: newContent } : prev);
+            setSelectedDoc((prev) => prev?.id === docId ? { ...prev, content: newContent } : prev);
             setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error auto-saving:', err);
@@ -609,7 +609,7 @@ export function DocumentEditor() {
         try {
             const { error } = await supabase.from('documents').update({ recursos: newRecursos }).eq('id', docId);
             if (error) throw error;
-            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, recursos: newRecursos } : prev);
+            setSelectedDoc((prev) => prev?.id === docId ? { ...prev, recursos: newRecursos } : prev);
             setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error updating recursos:', err);
@@ -620,7 +620,7 @@ export function DocumentEditor() {
         try {
             const { error } = await supabase.from('documents').update({ etiquetas: newEtiquetas }).eq('id', docId);
             if (error) throw error;
-            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, etiquetas: newEtiquetas } : prev);
+            setSelectedDoc((prev) => prev?.id === docId ? { ...prev, etiquetas: newEtiquetas } : prev);
             setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error updating etiquetas:', err);
@@ -634,11 +634,11 @@ export function DocumentEditor() {
             const updates = { author_id: newUser.id, author_name: newUser.name, author_role: newUser.role };
             const { error } = await supabase.from('documents').update(updates).eq('id', docId);
             if (error) throw error;
-            setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, ...updates } : prev);
+            setSelectedDoc((prev) => prev?.id === docId ? { ...prev, ...updates } : prev);
             setHasUnsavedChanges(true);
             fetchDocs();
-        } catch (err: any) {
-            showToast('Error al actualizar docente: ' + err.message, 'error');
+        } catch (err: unknown) {
+            showToast('Error al actualizar docente: ' + getErrorMessage(err), 'error');
         }
     };
 
@@ -658,7 +658,7 @@ export function DocumentEditor() {
             }
             setNewCommentText('');
             fetchComments();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error adding comment:', err);
         }
     };
@@ -708,8 +708,8 @@ export function DocumentEditor() {
             // Force Version Sidebar refresh by clearing selectedDocId temporarily or just notifying global state
             // It will auto-refresh if the user clicks out and back, but let's notify the user
             showToast('Versión guardada correctamente.', 'success');
-        } catch (err: any) {
-            showToast('Error al guardar versión: ' + err.message, 'error');
+        } catch (err: unknown) {
+            showToast('Error al guardar versión: ' + getErrorMessage(err), 'error');
         } finally {
             setLoading(false);
         }
@@ -748,7 +748,7 @@ export function DocumentEditor() {
   <h1>${title}</h1>
   <div class="meta">Autor: ${author} &nbsp;|&nbsp; Fecha: ${date}</div>
   ${content}
-  <script>window.onload = function() { window.print(); setTimeout(() => window.close(), 1000); };<\/script>
+  <script>window.onload = function() { window.print(); setTimeout(() => window.close(), 1000); };</script>
 </body>
 </html>`);
         printWindow.document.close();
@@ -763,14 +763,14 @@ export function DocumentEditor() {
             setNewCatName('');
             setShowNewCatInput(false);
             fetchCategories();
-        } catch (err: any) {
-            showToast('Error al crear categoría: ' + err.message, 'error');
+        } catch (err: unknown) {
+            showToast('Error al crear categoría: ' + getErrorMessage(err), 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSaveDocumentFromAI = async (data: { title: string; content: string; metadata: any }) => {
+    const handleSaveDocumentFromAI = async (data: { title: string; content: string; metadata: PendingCreateFromAIMetadata }) => {
         if (!user) return;
         setLoading(true);
         try {
@@ -793,8 +793,8 @@ export function DocumentEditor() {
             if (error) throw error;
             await fetchDocs();
             setSelectedDoc(inserted);
-        } catch (err: any) {
-            showToast('Error creando documento desde IA: ' + err.message, 'error');
+        } catch (err: unknown) {
+            showToast('Error creando documento desde IA: ' + getErrorMessage(err), 'error');
         } finally {
             setLoading(false);
             setPendingCreateFromAI(null);
@@ -833,8 +833,8 @@ export function DocumentEditor() {
             await fetchDocs();
             setSelectedDoc(data);
             showToast('Clase duplicada correctamente.', 'success');
-        } catch (err: any) {
-            showToast('Error duplicando: ' + err.message, 'error');
+        } catch (err: unknown) {
+            showToast('Error duplicando: ' + getErrorMessage(err), 'error');
         } finally {
             setLoading(false);
         }
@@ -880,7 +880,7 @@ export function DocumentEditor() {
         return matchesCategory && matchesGrado && matchesHoras && matchesSearch;
     }).sort((a, b) => {
         // We use parseFloat to handle decimal insertions correctly (e.g. 1.5)
-        const parseNum = (val: string) => parseFloat(val?.replace(',', '.') || 'NaN');
+        const parseNum = (val: string | null) => parseFloat(val?.replace(',', '.') || 'NaN');
         const numA = parseNum(a.num_clase);
         const numB = parseNum(b.num_clase);
 
@@ -900,8 +900,8 @@ export function DocumentEditor() {
         : documents;
 
     const uniqueGradosRaw = categoryDocs.flatMap(d => d.grado ? d.grado.split(',').map((s: string) => s.trim()) : []);
-    const uniqueGrados = Array.from(new Set(uniqueGradosRaw.filter(Boolean)));
-    const uniqueHoras = Array.from(new Set(categoryDocs.map(d => d.carga_horaria).filter(Boolean)));
+    const uniqueGrados = Array.from(new Set(uniqueGradosRaw.filter((g): g is string => Boolean(g))));
+    const uniqueHoras = Array.from(new Set(categoryDocs.map(d => d.carga_horaria).filter((h): h is string => Boolean(h))));
 
     return (
         <div className={styles.centerContainer}>
@@ -1012,7 +1012,7 @@ export function DocumentEditor() {
                                             style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }}
                                         >
                                             <option value="">Todos los Años (Grados)</option>
-                                            {uniqueGrados.map((g: any) => <option key={g} value={g}>{g}</option>)}
+                                            {uniqueGrados.map((g) => <option key={g} value={g}>{g}</option>)}
                                         </select>
                                     )}
                                     {uniqueHoras.length > 0 && (
@@ -1023,7 +1023,7 @@ export function DocumentEditor() {
                                             style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }}
                                         >
                                             <option value="">Todas las Duraciones</option>
-                                            {uniqueHoras.map((h: any) => <option key={h} value={h}>{h}</option>)}
+                                            {uniqueHoras.map((h) => <option key={h} value={h}>{h}</option>)}
                                         </select>
                                     )}
                                 </div>
@@ -1267,7 +1267,7 @@ export function DocumentEditor() {
                                                             style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc' }}
                                                         >
                                                             <option value="">-- Sin Categorizar --</option>
-                                                            {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                                            {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                                                         </select>
                                                     ) : (
                                                         <span className={styles.badge} style={{ margin: 0, backgroundColor: 'var(--text-secondary)' }}>{selectedDoc.tematica || 'Sin Categorizar'}</span>
@@ -1322,7 +1322,7 @@ export function DocumentEditor() {
                                                                 <>
                                                                     {prevClass && (
                                                                         <button
-                                                                            onClick={() => setSelectedDoc(documents.find(d => d.id === prevClass.id))}
+                                                                            onClick={() => setSelectedDoc(documents.find(d => d.id === prevClass.id) ?? null)}
                                                                             style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                                                             title={`Ir a ${prevClass.title}`}
                                                                         >
@@ -1331,7 +1331,7 @@ export function DocumentEditor() {
                                                                     )}
                                                                     {nextClass && (
                                                                         <button
-                                                                            onClick={() => setSelectedDoc(documents.find(d => d.id === nextClass.id))}
+                                                                            onClick={() => setSelectedDoc(documents.find(d => d.id === nextClass.id) ?? null)}
                                                                             style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                                                             title={`Ir a ${nextClass.title}`}
                                                                         >
@@ -1391,7 +1391,7 @@ export function DocumentEditor() {
                                                 <button
                                                     className={styles.btnSecondary}
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(selectedDoc.file_url);
+                                                        if (selectedDoc.file_url) navigator.clipboard.writeText(selectedDoc.file_url);
                                                         setCopiedLink(true);
                                                         setTimeout(() => setCopiedLink(false), 2000);
                                                     }}
@@ -1614,7 +1614,7 @@ export function DocumentEditor() {
                                     ))}
                                 </div>
                             </div>
-                            <select value={uploadType} onChange={(e: any) => setUploadType(e.target.value)}>
+                            <select value={uploadType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setUploadType(e.target.value as typeof uploadType)}>
                                 <option value="editor">Editor de Texto Integrado</option>
                                 <option value="word">Documento Word (.docx)</option>
                                 <option value="pdf">Archivo PDF</option>
@@ -1622,7 +1622,7 @@ export function DocumentEditor() {
                             </select>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', marginBottom: '12px' }}>
-                                <select value={uploadCategory} onChange={(e: any) => setUploadCategory(e.target.value)} style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%' }}>
+                                <select value={uploadCategory} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setUploadCategory(e.target.value)} style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%' }}>
                                     <option value="">-- Sin Temática --</option>
                                     {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                 </select>

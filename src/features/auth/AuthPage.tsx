@@ -3,9 +3,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { GoogleLogin } from '@react-oauth/google';
+import type { CredentialResponse } from '@react-oauth/google';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import styles from './AuthPage.module.css';
+import { getErrorMessage } from '../../lib/errors';
 
 const loginSchema = z.object({
     email: z.string().min(1, { message: 'El usuario o email es requerido' }),
@@ -38,18 +40,19 @@ export function AuthPage() {
             if (signInError) throw signInError;
 
             navigate('/');
-        } catch (err: any) {
-            if (err.message?.includes('Invalid login credentials')) {
+        } catch (err: unknown) {
+            const message = getErrorMessage(err);
+            if (message.includes('Invalid login credentials')) {
                 setError('Credenciales inválidas. Si usaste Google originalmente, por favor haz clic en "Acceder con Google".');
             } else {
-                setError(err.message || 'Error al iniciar sesión');
+                setError(message);
             }
         } finally {
             setLoading(false);
         }
     };
 
-    const handleGoogleSuccess = async (credentialResponse: any) => {
+    const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
         try {
             if (!credentialResponse.credential) throw new Error('No credential available');
 
@@ -61,9 +64,9 @@ export function AuthPage() {
             if (authError) throw authError;
 
             navigate('/');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
-            setError('Fallo la autenticación con Google: ' + (error.message || 'Error desconocido'));
+            setError('Fallo la autenticación con Google: ' + getErrorMessage(error));
         }
     };
 

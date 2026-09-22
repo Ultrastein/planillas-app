@@ -8,6 +8,7 @@ import { DesktopLayout } from './layouts/DesktopLayout';
 import { AdminPanel } from './features/admin/AdminPanel';
 import { DocumentEditor } from './features/editor/DocumentEditor';
 import { ToastContainer } from './components/Toast/ToastContainer';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   const { setUser, setLoading, fetchProfile, isLoading } = useAuthStore();
@@ -44,23 +45,25 @@ function App() {
   }
 
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <HashRouter>
-        <Routes>
-          <Route path="/auth" element={<AuthPage />} />
+    <ErrorBoundary>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <HashRouter>
+          <Routes>
+            <Route path="/auth" element={<AuthPage />} />
 
-          {/* Protected Routes */}
-          <Route path="/" element={<DesktopLayout />}>
-            <Route index element={<Navigate to="/editor" replace />} />
-            <Route path="editor" element={<DocumentEditor />} />
-            <Route path="admin" element={<AdminPanel />} />
-          </Route>
+            {/* Protected Routes */}
+            <Route path="/" element={<DesktopLayout />}>
+              <Route index element={<Navigate to="/editor" replace />} />
+              <Route path="editor" element={<DocumentEditor />} />
+              <Route path="admin" element={<AdminPanel />} />
+            </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </HashRouter>
-      <ToastContainer />
-    </GoogleOAuthProvider>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </HashRouter>
+        <ToastContainer />
+      </GoogleOAuthProvider>
+    </ErrorBoundary>
   );
 }
 

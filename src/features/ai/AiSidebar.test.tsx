@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiSidebar } from './AiSidebar';
 import { useDocumentStore } from '../../store/useDocumentStore';
+import { makeDocument } from '../../test/fixtures';
 
 vi.mock('lucide-react', () => ({
     Sparkles: () => <div>Sparkles</div>,
@@ -59,7 +60,7 @@ describe('AiSidebar', () => {
     });
 
     it('shows global chat mode message when no doc is selected', () => {
-        useDocumentStore.setState({ allDocuments: [{ id: '1', title: 'Clase 1', tematica: 'Robótica', grado: '3ro', author_name: 'Prof X' }] });
+        useDocumentStore.setState({ allDocuments: [makeDocument({ id: '1', title: 'Clase 1', tematica: 'Robótica', grado: '3ro', author_name: 'Prof X' })] });
         render(<AiSidebar />);
         fireEvent.click(screen.getByText('💬 Chat'));
         expect(screen.getByText(/1 planificaciones disponibles/i)).toBeInTheDocument();

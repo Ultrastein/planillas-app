@@ -6,11 +6,12 @@ import { MessageSquare, Send, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import styles from './CommentsThread.module.css';
+import type { DocumentComment } from '../../types/document';
 
 export function CommentsThread() {
     const { profile: user } = useAuthStore();
     const { selectedDocId } = useDocumentStore();
-    const [comments, setComments] = useState<any[]>([]);
+    const [comments, setComments] = useState<DocumentComment[]>([]);
     const [newComment, setNewComment] = useState('');
 
     useEffect(() => {

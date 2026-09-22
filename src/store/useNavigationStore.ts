@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { getErrorMessage } from '../lib/errors';
 
 export interface NavigationTab {
     id: string;
@@ -30,9 +31,9 @@ export const useNavigationStore = create<NavigationState>((set) => ({
 
             if (error) throw error;
             set({ tabs: data || [], loading: false });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching navigation tabs:', err);
-            set({ error: err.message, loading: false });
+            set({ error: getErrorMessage(err), loading: false });
         }
     }
 }));
