@@ -324,3 +324,151 @@
     color: #64748b;
     font-size: 0.85rem;
 }
+
+/* HAMBURGER MENU (mobile/tablet only) */
+.hamburgerBtn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: var(--text-primary);
+    background-color: transparent;
+    transition: all 0.2s ease;
+}
+
+.hamburgerBtn:hover {
+    background-color: var(--border-color);
+    color: var(--primary-color);
+}
+
+/* BACKDROP for the mobile drawers (left nav + right panel) */
+.backdrop {
+    display: none;
+}
+
+/* ===================== RESPONSIVE ===================== */
+
+@media (max-width: 900px) {
+    .layout {
+        overflow-x: hidden;
+    }
+
+    /* Sidebar becomes an off-canvas drawer instead of a permanent column */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: min(82vw, 300px);
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: var(--shadow-lg);
+        z-index: 110;
+    }
+
+    .sidebarOpen {
+        transform: translateX(0);
+    }
+
+    /* Main content always takes the full viewport width on small screens */
+    .mainContent {
+        width: 100%;
+    }
+
+    .hamburgerBtn {
+        display: inline-flex;
+    }
+
+    .backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background-color: rgba(15, 23, 42, 0.45);
+        z-index: 100;
+    }
+
+    .topbar {
+        padding: 0 12px;
+        gap: 8px;
+    }
+
+    .documentMeta h2 {
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .actions {
+        gap: 8px;
+    }
+
+    /* Hide the name/role text on the header profile pill to save space, keep it tappable */
+    .userInfoHeader {
+        display: none;
+    }
+
+    .headerProfile {
+        padding: 6px;
+    }
+
+    .iconBtnHeader {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+    }
+
+    /* The right (AI/versions/comments) panel becomes a full-height overlay too,
+       so it never pushes the layout wider than the viewport. */
+    .rightPanel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(92vw, 360px) !important;
+        transform: translateX(0);
+        transition: transform 0.25s ease, border-color 0.3s ease;
+        box-shadow: var(--shadow-lg);
+        z-index: 110;
+    }
+
+    .rightPanelCollapsed {
+        width: min(92vw, 360px) !important;
+        transform: translateX(100%);
+        border-left: none !important;
+    }
+
+    .panelContent {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .brand {
+        padding: 16px;
+    }
+
+    .logoImage {
+        max-width: 140px;
+    }
+
+    .navTree {
+        padding: 14px;
+    }
+
+    .navSection li {
+        padding: 12px 14px;
+    }
+
+    .topbar {
+        height: 56px;
+        padding: 0 10px;
+    }
+
+    .sidebar {
+        width: min(88vw, 280px);
+    }
+}

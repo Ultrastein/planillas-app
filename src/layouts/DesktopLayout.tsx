@@ -1,7 +1,7 @@
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import styles from './DesktopLayout.module.css';
-import { LogOut, Settings, FileText, ChevronDown, ChevronRight, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { LogOut, Settings, FileText, ChevronDown, ChevronRight, PanelRightClose, PanelRightOpen, Menu, X } from 'lucide-react';
 import { VersionSidebar } from '../features/versions/VersionSidebar';
 import { FeedbackButton } from '../features/feedback/FeedbackButton';
 import { AiSidebar } from '../features/ai/AiSidebar';
@@ -15,6 +15,7 @@ export function DesktopLayout() {
     const navigate = useNavigate();
     const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
     const [isNavOpen, setIsNavOpen] = useState(true);
+    const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
     useEffect(() => {
         fetchTabs();
@@ -24,10 +25,12 @@ export function DesktopLayout() {
         return <Navigate to="/auth" replace />;
     }
 
+    const closeMobileNav = () => setIsMobileNavOpen(false);
+
     return (
         <div className={styles.layout}>
             {/* LEFT SIDEBAR */}
-            <aside className={styles.sidebar}>
+            <aside className={`${styles.sidebar} ${isMobileNavOpen ? styles.sidebarOpen : ''}`}>
                 <div className={styles.brand}>
                     <img src="/logo.png" alt="TecnoKids Logo" className={styles.logoImage} />
                     <span className={styles.badge} style={{ marginTop: 8 }}>Desktop</span>
@@ -35,8 +38,8 @@ export function DesktopLayout() {
 
                 <nav className={styles.navTree}>
                     <div className={styles.navSection}>
-                        <h3 
-                            className={styles.collapsibleHeader} 
+                        <h3
+                            className={styles.collapsibleHeader}
                             onClick={() => setIsNavOpen(!isNavOpen)}
                         >
                             Navegación
@@ -45,12 +48,12 @@ export function DesktopLayout() {
                         {isNavOpen && (
                         <ul>
                             {tabs.length > 0 ? tabs.map((tab) => (
-                                <li key={tab.id} onClick={() => navigate(tab.path)}>
+                                <li key={tab.id} onClick={() => { navigate(tab.path); closeMobileNav(); }}>
                                     <FileText size={14} style={{ marginRight: 8 }} />
                                     {tab.label}
                                 </li>
                             )) : (
-                                <li onClick={() => navigate('/editor')}><FileText size={14} style={{ marginRight: 8 }} />Año Lectivo 2026 (Predeterminado)</li>
+                                <li onClick={() => { navigate('/editor'); closeMobileNav(); }}><FileText size={14} style={{ marginRight: 8 }} />Año Lectivo 2026 (Predeterminado)</li>
                             )}
                         </ul>
                         )}
@@ -58,9 +61,22 @@ export function DesktopLayout() {
                 </nav>
             </aside>
 
+            {/* Backdrop shown behind the mobile drawer while it's open */}
+            {isMobileNavOpen && (
+                <div className={styles.backdrop} onClick={closeMobileNav} aria-hidden="true" />
+            )}
+
             {/* CENTRAL AREA */}
             <main className={styles.mainContent}>
                 <header className={styles.topbar}>
+                    <button
+                        className={styles.hamburgerBtn}
+                        onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+                        title={isMobileNavOpen ? 'Cerrar menú' : 'Abrir menú'}
+                        aria-label={isMobileNavOpen ? 'Cerrar menú' : 'Abrir menú'}
+                    >
+                        {isMobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+                    </button>
                     <div className={styles.documentMeta}>
                         <h2>{window.location.pathname.includes('admin') ? 'Master Control' : 'Edición de Planificación'}</h2>
                     </div>
