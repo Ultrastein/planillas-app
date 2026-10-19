@@ -18,8 +18,8 @@ export function ConfirmModal({
             style={{
                 position: 'fixed',
                 inset: 0,
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                zIndex: 1000,
+                backgroundColor: 'rgba(14, 26, 36, 0.45)',
+                zIndex: 1300,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -29,30 +29,32 @@ export function ConfirmModal({
             <div
                 style={{
                     background: 'white',
-                    borderRadius: '12px',
-                    padding: '24px',
+                    borderRadius: '18px',
+                    padding: '28px',
                     maxWidth: '420px',
                     width: '90%',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                    boxShadow: 'var(--shadow-lg)',
                 }}
                 onClick={e => e.stopPropagation()}
             >
-                <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#1e293b' }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {title}
                 </h3>
-                <p style={{ margin: '0 0 24px', fontSize: '0.9rem', color: '#64748b' }}>
+                <p style={{ margin: '0 0 24px', fontSize: '15px', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
                     {message}
                 </p>
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                     <button
                         onClick={onCancel}
                         style={{
-                            padding: '8px 20px',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
+                            minHeight: '44px',
+                            padding: '0 18px',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border-strong)',
                             background: 'white',
                             cursor: 'pointer',
-                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            fontSize: '14px',
                         }}
                     >
                         Cancelar
@@ -60,14 +62,15 @@ export function ConfirmModal({
                     <button
                         onClick={onConfirm}
                         style={{
-                            padding: '8px 20px',
-                            borderRadius: '6px',
+                            minHeight: '44px',
+                            padding: '0 18px',
+                            borderRadius: 'var(--radius-md)',
                             border: 'none',
-                            background: '#ef4444',
+                            background: 'var(--danger-color)',
                             color: 'white',
                             cursor: 'pointer',
-                            fontWeight: 700,
-                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            fontSize: '14px',
                         }}
                     >
                         {confirmLabel}

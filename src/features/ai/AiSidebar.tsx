@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sparkles, Hammer, ShieldAlert, Package, Send } from 'lucide-react';
+import { Sparkles, Hammer, ShieldAlert, Package, Send, ScanSearch, ClipboardList, Lightbulb, PenLine, FileText } from 'lucide-react';
 import { useDocumentStore } from '../../store/useDocumentStore';
 import { useToast } from '../../components/Toast/useToast';
 import {
@@ -203,19 +203,22 @@ export function AiSidebar() {
     };
 
     const tabs: { key: Tab; label: string }[] = [
-        { key: 'generar', label: '✨ Generar' },
-        { key: 'analizar', label: '🔍 Analizar' },
-        { key: 'mejorar', label: '🛠️ Mejorar' },
-        { key: 'chat', label: '💬 Chat' },
+        { key: 'generar', label: 'Generar' },
+        { key: 'analizar', label: 'Analizar' },
+        { key: 'mejorar', label: 'Mejorar' },
+        { key: 'chat', label: 'Chat' },
     ];
 
     return (
-        <div className={styles.aiContainer} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className={styles.aiContainer}>
             {/* Tab Bar */}
-            <div className={styles.tabBar}>
+            <div className={styles.tabBar} role="tablist" aria-label="Herramientas de IA">
                 {tabs.map(t => (
                     <button
                         key={t.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === t.key}
                         className={`${styles.tab} ${activeTab === t.key ? styles.tabActive : ''}`}
                         onClick={() => setActiveTab(t.key)}
                     >
@@ -224,28 +227,31 @@ export function AiSidebar() {
                 ))}
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className={styles.tabBody}>
 
                 {/* ===== TAB: GENERAR ===== */}
                 {activeTab === 'generar' && (
                     <>
-                        <div>
-                            <h4 className={styles.sectionTitle}>Generador de Planificación</h4>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                        <div className={styles.generatorCard}>
+                            <label htmlFor="ai-generator" className={styles.generatorLabel}>Generador de Planificación</label>
+                            <p className={styles.helpText}>
                                 Describí la clase y la IA la crea completa con estructura pedagógica.
                             </p>
                             <textarea
+                                id="ai-generator"
+                                rows={4}
                                 className={styles.generatorTextarea}
                                 value={generatorPrompt}
                                 onChange={e => setGeneratorPrompt(e.target.value)}
                                 placeholder="Ej: Clase de 2 módulos sobre Arduino para 3er año. Objetivo: introducir pines digitales."
                             />
                             <button
-                                style={{ width: '100%', marginTop: '8px', padding: '10px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}
+                                type="button"
+                                className={styles.btnDark}
                                 onClick={handleGenerate}
                                 disabled={generatorLoading || !generatorPrompt.trim()}
                             >
-                                {generatorLoading ? '⏳ Generando...' : '✨ Generar Planificación Completa'}
+                                {generatorLoading ? <><span className={styles.spinnerLight} /> Generando...</> : 'Generar clase'}
                             </button>
                         </div>
 
@@ -255,14 +261,15 @@ export function AiSidebar() {
                                 {QUICK_TEMPLATES.map(t => {
                                     const colors = TEMPLATE_COLORS[t.id] ?? { bg: '#f1f5f9', border: '#cbd5e1', color: '#475569' };
                                     return (
-                                        <div
+                                        <button
                                             key={t.id}
+                                            type="button"
                                             className={styles.templateChip}
                                             style={{ background: colors.bg, borderColor: colors.border, color: colors.color }}
                                             onClick={() => setGeneratorPrompt(t.prompt)}
                                         >
-                                            {t.icon} {t.name}
-                                        </div>
+                                            {t.name}
+                                        </button>
                                     );
                                 })}
                             </div>
@@ -270,24 +277,26 @@ export function AiSidebar() {
 
                         {selectedDoc && (
                             <div>
-                                <h4 className={styles.sectionTitle}>Resumen Ejecutivo</h4>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                    Genera una síntesis de una línea para informes o directivos.
-                                </p>
                                 {summaryResult ? (
-                                    <div className={styles.resultBox}>
-                                        <p style={{ margin: 0, fontStyle: 'italic' }}>{summaryResult}</p>
-                                        <button className={styles.insertBtn} onClick={() => navigator.clipboard.writeText(summaryResult)}>
+                                    <div className={styles.summaryBox}>
+                                        <span className={styles.summaryEyebrow}>Resumen ejecutivo</span>
+                                        <p>{summaryResult}</p>
+                                        <button type="button" className={styles.summaryCopy} onClick={() => navigator.clipboard.writeText(summaryResult)}>
                                             Copiar
                                         </button>
                                     </div>
                                 ) : (
                                     <button
-                                        style={{ width: '100%', padding: '8px', background: '#e2e8f0', color: '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+                                        type="button"
+                                        className={styles.toolCard}
                                         onClick={handleGenerateSummary}
                                         disabled={summaryLoading}
                                     >
-                                        {summaryLoading ? '⏳ Generando...' : '📄 Generar Resumen'}
+                                        <FileText size={18} aria-hidden="true" className={styles.toolCardIcon} />
+                                        <span>
+                                            <span className={styles.toolCardTitle}>{summaryLoading ? 'Generando resumen...' : 'Resumen ejecutivo'}</span>
+                                            <span className={styles.toolCardDesc}>Síntesis de una línea para informes o directivos.</span>
+                                        </span>
                                     </button>
                                 )}
                             </div>
@@ -344,11 +353,8 @@ export function AiSidebar() {
                                 </div>
                             </div>
                         ) : (
-                            <button
-                                style={{ width: '100%', padding: '10px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}
-                                onClick={handleAnalyze}
-                            >
-                                ✨ Analizar este Documento
+                            <button type="button" className={styles.btnPrimary} onClick={handleAnalyze}>
+                                <ScanSearch size={16} aria-hidden="true" /> Analizar este documento
                             </button>
                         )}
                     </>
@@ -368,26 +374,27 @@ export function AiSidebar() {
                                 <div>
                                     {rubricsResult ? (
                                         <>
-                                            <h4 className={styles.sectionTitle}>📋 Rúbrica Generada</h4>
+                                            <h4 className={styles.sectionTitle}><ClipboardList size={14} aria-hidden="true" /> Rúbrica generada</h4>
                                             <div className={styles.resultBox} dangerouslySetInnerHTML={{ __html: rubricsResult }} />
                                             <button className={styles.insertBtn} onClick={() => insertAtEndOfDoc(rubricsResult)}>
                                                 Insertar al final del documento
                                             </button>
                                         </>
                                     ) : (
-                                        <div
+                                        <button
+                                            type="button"
                                             className={styles.toolCard}
-                                            style={{ cursor: rubricsLoading ? 'default' : 'pointer' }}
-                                            onClick={!rubricsLoading ? handleGenerateRubric : undefined}
+                                            disabled={rubricsLoading}
+                                            onClick={handleGenerateRubric}
                                         >
-                                            <span className={styles.toolCardIcon}>📋</span>
-                                            <div>
-                                                <p className={styles.toolCardTitle}>
-                                                    {rubricsLoading ? '⏳ Generando rúbrica...' : 'Generar Rúbrica de Evaluación'}
-                                                </p>
-                                                <p className={styles.toolCardDesc}>Criterios e indicadores basados en el contenido de la clase.</p>
-                                            </div>
-                                        </div>
+                                            <ClipboardList size={18} aria-hidden="true" className={styles.toolCardIcon} />
+                                            <span>
+                                                <span className={styles.toolCardTitle}>
+                                                    {rubricsLoading ? 'Generando rúbrica...' : 'Generar rúbrica'}
+                                                </span>
+                                                <span className={styles.toolCardDesc}>Criterios e indicadores a partir de esta clase.</span>
+                                            </span>
+                                        </button>
                                     )}
                                 </div>
 
@@ -395,17 +402,17 @@ export function AiSidebar() {
                                 <div>
                                     {activitiesResult ? (
                                         <>
-                                            <h4 className={styles.sectionTitle}>💡 Actividades Sugeridas</h4>
+                                            <h4 className={styles.sectionTitle}><Lightbulb size={14} aria-hidden="true" /> Actividades sugeridas</h4>
                                             {activitiesResult.map((act, i) => {
                                                 const badge = ACTIVITY_BADGE[act.type] ?? { bg: '#f1f5f9', color: '#475569', label: act.type };
                                                 return (
                                                     <div key={i} className={styles.activityItem}>
                                                         <span className={styles.activityBadge} style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>
-                                                        <p style={{ fontWeight: 600, margin: '4px 0 2px', fontSize: '0.85rem' }}>{act.title}</p>
-                                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{act.description}</p>
+                                                        <p className={styles.activityTitle}>{act.title}</p>
+                                                        <p className={styles.activityDesc}>{act.description}</p>
                                                         <button
+                                                            type="button"
                                                             className={styles.insertBtn}
-                                                            style={{ marginTop: '6px' }}
                                                             onClick={() => insertAtEndOfDoc(`<h3>${act.title}</h3><p>${act.description}</p>`)}
                                                         >
                                                             Insertar
@@ -415,41 +422,43 @@ export function AiSidebar() {
                                             })}
                                         </>
                                     ) : (
-                                        <div
+                                        <button
+                                            type="button"
                                             className={styles.toolCard}
-                                            style={{ cursor: activitiesLoading ? 'default' : 'pointer' }}
-                                            onClick={!activitiesLoading ? handleSuggestActivities : undefined}
+                                            disabled={activitiesLoading}
+                                            onClick={handleSuggestActivities}
                                         >
-                                            <span className={styles.toolCardIcon}>💡</span>
-                                            <div>
-                                                <p className={styles.toolCardTitle}>
-                                                    {activitiesLoading ? '⏳ Sugiriendo...' : 'Sugerir Actividades Complementarias'}
-                                                </p>
-                                                <p className={styles.toolCardDesc}>3 actividades de refuerzo, extensión y evaluación alternativa.</p>
-                                            </div>
-                                        </div>
+                                            <Lightbulb size={18} aria-hidden="true" className={styles.toolCardIcon} />
+                                            <span>
+                                                <span className={styles.toolCardTitle}>
+                                                    {activitiesLoading ? 'Sugiriendo...' : 'Actividades sugeridas'}
+                                                </span>
+                                                <span className={styles.toolCardDesc}>Refuerzo, extensión y evaluación alternativa.</span>
+                                            </span>
+                                        </button>
                                     )}
                                 </div>
 
                                 {/* Mejora texto */}
                                 <div>
-                                    <div
+                                    <button
+                                        type="button"
                                         className={styles.toolCard}
-                                        style={{ cursor: editorSelection?.text && !improveLoading ? 'pointer' : 'default', opacity: editorSelection?.text ? 1 : 0.5 }}
-                                        onClick={editorSelection?.text && !improveLoading ? handleImproveText : undefined}
+                                        disabled={!editorSelection?.text || improveLoading}
+                                        onClick={handleImproveText}
                                     >
-                                        <span className={styles.toolCardIcon}>✏️</span>
-                                        <div>
-                                            <p className={styles.toolCardTitle}>
-                                                {improveLoading ? '⏳ Mejorando...' : 'Mejorar Texto Seleccionado'}
-                                            </p>
-                                            <p className={styles.toolCardDesc}>
+                                        <PenLine size={18} aria-hidden="true" className={styles.toolCardIcon} />
+                                        <span>
+                                            <span className={styles.toolCardTitle}>
+                                                {improveLoading ? 'Mejorando...' : 'Mejorar texto seleccionado'}
+                                            </span>
+                                            <span className={styles.toolCardDesc}>
                                                 {editorSelection?.text
                                                     ? 'Texto seleccionado listo. Hacé clic para mejorarlo.'
                                                     : 'Seleccioná texto en el editor para habilitarlo.'}
-                                            </p>
-                                        </div>
-                                    </div>
+                                            </span>
+                                        </span>
+                                    </button>
                                     {editorSelection?.text && (
                                         <div className={styles.selectionPreview}>
                                             <strong>Seleccionado:</strong> {editorSelection.text.slice(0, 120)}{editorSelection.text.length > 120 ? '...' : ''}
@@ -463,63 +472,54 @@ export function AiSidebar() {
 
                 {/* ===== TAB: CHAT ===== */}
                 {activeTab === 'chat' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: '200px' }}>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                    <div className={styles.chat}>
+                        <p className={styles.helpText}>
                             {selectedDoc
                                 ? `Consultando sobre: "${selectedDoc.title}"`
                                 : `Modo global: ${allDocuments.length} planificaciones disponibles`}
                         </p>
-                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px', minHeight: '120px' }}>
+                        <div className={styles.chatLog}>
                             {chatLog.length === 0 ? (
-                                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', fontStyle: 'italic', marginTop: '20px' }}>
+                                <p className={styles.chatEmpty}>
                                     {selectedDoc
                                         ? '¿Qué actividad dura más tiempo? ¿Qué evaluación se menciona?'
                                         : '¿Cuántas clases de Robótica hay? ¿Quién enseña Historia?'}
                                 </p>
                             ) : (
                                 chatLog.map((msg, i) => (
-                                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                                        <div style={{
-                                            maxWidth: '85%', padding: '8px 12px', borderRadius: '12px',
-                                            backgroundColor: msg.role === 'user' ? 'var(--primary-color)' : '#f1f5f9',
-                                            color: msg.role === 'user' ? 'white' : 'var(--text-color)',
-                                            fontSize: '0.85rem', whiteSpace: 'pre-wrap'
-                                        }}>
-                                            {msg.text}
-                                        </div>
+                                    <div key={i} className={`${styles.chatMsg} ${msg.role === 'user' ? styles.chatMsgUser : styles.chatMsgAi}`}>
+                                        {msg.text}
                                     </div>
                                 ))
                             )}
                             {chatLoading && (
-                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
-                                    <div className={styles.spinner} style={{ width: '12px', height: '12px' }} />
+                                <div className={styles.chatThinking}>
+                                    <div className={styles.spinner} />
                                     Pensando...
                                 </div>
                             )}
                             <div ref={chatEndRef} />
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div className={styles.chatInputRow}>
+                            <label htmlFor="ai-chat" className="sr-only">Pregunta para la IA</label>
                             <input
+                                id="ai-chat"
                                 type="text"
+                                className={styles.chatInput}
                                 value={chatInput}
                                 onChange={e => setChatInput(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && !chatLoading && handleSendChat()}
                                 placeholder="Escribí tu pregunta..."
-                                style={{ flex: 1, padding: '10px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
                                 disabled={chatLoading}
                             />
                             <button
+                                type="button"
+                                className={styles.chatSend}
+                                aria-label="Enviar pregunta"
                                 onClick={handleSendChat}
                                 disabled={!chatInput.trim() || chatLoading}
-                                style={{
-                                    backgroundColor: chatInput.trim() && !chatLoading ? 'var(--primary-color)' : '#cbd5e1',
-                                    color: 'white', border: 'none', borderRadius: '50%',
-                                    width: '36px', height: '36px', display: 'flex',
-                                    justifyContent: 'center', alignItems: 'center',
-                                    cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default',
-                                }}
                             >
-                                <Send size={16} />
+                                <Send size={16} aria-hidden="true" />
                             </button>
                         </div>
                     </div>

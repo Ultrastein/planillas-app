@@ -1,57 +1,136 @@
 .aiContainer {
     display: flex;
     flex-direction: column;
-    padding-bottom: 24px;
-    border-bottom: 1px dashed var(--border-color);
-    margin-bottom: 24px;
+    flex: 1;
+    min-height: 0;
 }
 
-.emptyState {
+/* Tabs: segmented control */
+.tabBar {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 12px;
-    padding: 32px 16px;
-    background-color: #f8fafc;
+    gap: 4px;
+    margin: 16px 20px 0;
+    padding: 4px;
+    background: var(--bg-primary);
     border-radius: var(--radius-md);
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    border: 1px dashed var(--border-color);
+    flex-shrink: 0;
 }
 
-.header {
+.tab {
+    flex: 1 1 0;
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 6px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.tab:hover {
     color: var(--text-primary);
 }
 
-.header h3 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin: 0;
+.tabActive,
+.tabActive:hover {
+    background: #FFFFFF;
+    color: var(--primary-hover);
+    box-shadow: var(--shadow-sm);
 }
 
-.analyzingBox {
+.tabBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.helpText {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+/* Generator */
+.generatorCard {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-border);
+}
+
+.generatorLabel {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.generatorTextarea {
+    width: 100%;
+    resize: vertical;
+    padding: 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--text-primary);
+    background: #FFFFFF;
+}
+
+.btnDark,
+.btnPrimary {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px;
-    background-color: #f8fafc;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
     border-radius: var(--radius-md);
-    color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-size: 14px;
+    font-weight: 600;
+    color: #FFFFFF;
 }
 
-.spinner {
+.btnDark {
+    background: var(--bg-sidebar);
+}
+
+.btnPrimary {
+    background: var(--primary-color);
+}
+
+.btnPrimary:hover:not(:disabled) {
+    background: var(--primary-hover);
+}
+
+.btnDark:disabled,
+.btnPrimary:disabled {
+    opacity: 0.5;
+}
+
+.spinner,
+.spinnerLight {
     width: 16px;
     height: 16px;
-    border: 2px solid #cbd5e1;
+    border: 2px solid var(--border-strong);
     border-top-color: var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
+    flex-shrink: 0;
+}
+
+.spinnerLight {
+    border-color: rgba(255, 255, 255, 0.35);
+    border-top-color: #FFFFFF;
 }
 
 @keyframes spin {
@@ -60,27 +139,239 @@
     }
 }
 
+.sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.templateGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.templateChip {
+    min-height: 40px;
+    padding: 8px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid transparent;
+    transition: filter 0.15s;
+}
+
+.templateChip:hover {
+    filter: brightness(0.97);
+}
+
+/* Tool cards */
+.toolCard {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    padding: 14px;
+    text-align: left;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-lg);
+    background: var(--accent-soft);
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.toolCard:hover:not(:disabled) {
+    border-color: var(--primary-color);
+}
+
+.toolCard:disabled {
+    background: #FFFFFF;
+    border-style: dashed;
+    border-color: var(--border-strong);
+}
+
+.toolCard > span {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.toolCardIcon {
+    color: var(--primary-color);
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.toolCardTitle {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.toolCardDesc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.summaryBox {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    border-radius: var(--radius-lg);
+    background: var(--warm-bg);
+    border: 1px solid var(--warm-border);
+}
+
+.summaryEyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--warm-text);
+}
+
+.summaryBox p {
+    font-size: 14px;
+    color: #3D2A08;
+    line-height: 1.45;
+}
+
+.summaryCopy {
+    align-self: flex-start;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid #E3C285;
+    border-radius: var(--radius-sm);
+    background: #FFFFFF;
+    color: #5C3800;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.resultBox {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    font-size: 13px;
+    overflow-x: auto;
+}
+
+.resultBox table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.resultBox th,
+.resultBox td {
+    border: 1px solid var(--border-color);
+    padding: 6px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.insertBtn {
+    margin-top: 8px;
+    min-height: 36px;
+    padding: 0 14px;
+    background: var(--primary-color);
+    color: #FFFFFF;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.insertBtn:hover {
+    background: var(--primary-hover);
+}
+
+.activityItem {
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 8px;
+}
+
+.activityBadge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.activityTitle {
+    font-weight: 600;
+    font-size: 14px;
+    margin: 6px 0 2px;
+}
+
+.activityDesc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.selectionPreview {
+    background: var(--warm-bg);
+    border: 1px solid var(--warm-border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    font-size: 13px;
+    color: var(--warm-text);
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Analyze */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding: 32px 16px;
+    border-radius: var(--radius-lg);
+    color: var(--text-muted);
+    font-size: 14px;
+    border: 1px dashed var(--border-strong);
+}
+
+.analyzingBox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
 .results {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    animation: fadeIn 0.4s ease-out;
+    animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .metadataCard {
-    background-color: white;
+    background: var(--bg-subtle);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     padding: 12px;
@@ -92,7 +383,8 @@
 .metaRow {
     display: flex;
     justify-content: space-between;
-    font-size: 0.85rem;
+    gap: 12px;
+    font-size: 13px;
 }
 
 .metaLabel {
@@ -102,16 +394,13 @@
 .metaValue {
     font-weight: 600;
     color: var(--text-primary);
+    text-align: right;
 }
 
-.sectionTitle {
+.section {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 8px;
 }
 
 .tagList {
@@ -119,170 +408,108 @@
     flex-wrap: wrap;
     gap: 6px;
     list-style: none;
-    padding: 0;
 }
 
 .tag {
-    background-color: #f1f5f9;
-    color: #334155;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    background: var(--primary-light);
+    color: var(--primary-hover);
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .eppTag {
-    background-color: #ffedd5;
-    color: #c2410c;
+    background: #FDE9DD;
+    color: #8A3A0F;
 }
 
-/* Tabs */
-.tabBar {
+/* Chat */
+.chat {
     display: flex;
-    border-bottom: 2px solid var(--border-color);
-    background: #f8fafc;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 240px;
+}
+
+.chatLog {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 120px;
+}
+
+.chatEmpty {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 20px;
+    line-height: 1.45;
+}
+
+.chatMsg {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.chatMsgUser {
+    align-self: flex-end;
+    background: var(--primary-color);
+    color: #FFFFFF;
+    border-bottom-right-radius: 4px;
+}
+
+.chatMsgAi {
+    align-self: flex-start;
+    background: #F1F4F6;
+    color: var(--text-primary);
+    border-bottom-left-radius: 4px;
+}
+
+.chatThinking {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.chatInputRow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chatInput {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.chatSend {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: #FFFFFF;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     flex-shrink: 0;
 }
 
-.tab {
-    flex: 1;
-    padding: 10px 4px;
-    text-align: center;
-    font-size: 0.72rem;
-    font-weight: 500;
-    cursor: pointer;
-    color: var(--text-secondary);
-    border: none;
-    background: transparent;
-    transition: background 0.15s;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-}
-
-.tab:hover { background: #e2e8f0; }
-
-.tabActive {
-    color: var(--primary-color);
-    font-weight: 700;
-    border-bottom: 2px solid var(--primary-color);
-    background: white;
-}
-
-.generatorTextarea {
-    width: 100%;
-    min-height: 80px;
-    padding: 10px;
-    font-size: 0.85rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    resize: vertical;
-    font-family: inherit;
-    box-sizing: border-box;
-}
-
-.templateGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.templateChip {
-    padding: 10px 8px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.78rem;
-    text-align: center;
-    font-weight: 600;
-    border: 1px solid transparent;
-    transition: opacity 0.15s;
-}
-
-.templateChip:hover { opacity: 0.8; }
-
-.toolCard {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px;
-    cursor: pointer;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    transition: border-color 0.15s;
-}
-
-.toolCard:hover { border-color: var(--primary-color); }
-
-.toolCardIcon { font-size: 1.4rem; line-height: 1; }
-
-.toolCardTitle {
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-    margin: 0 0 2px;
-}
-
-.toolCardDesc {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    margin: 0;
-}
-
-.resultBox {
-    background: #f8fafc;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 12px;
-    font-size: 0.82rem;
-    overflow-x: auto;
-}
-
-.insertBtn {
-    margin-top: 8px;
-    padding: 6px 14px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    font-weight: 600;
-}
-
-.insertBtn:hover { background: var(--primary-hover, #2563eb); }
-
-.activityItem {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 8px;
-}
-
-.activityBadge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.selectionPreview {
-    background: #fef9c3;
-    border: 1px solid #fde68a;
-    border-radius: 6px;
-    padding: 10px;
-    font-size: 0.8rem;
-    color: #92400e;
-    margin-top: 8px;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.section {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+.chatSend:disabled {
+    background: var(--border-strong);
 }

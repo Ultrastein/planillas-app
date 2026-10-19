@@ -34,6 +34,9 @@ interface DocumentState {
     setPendingCreateFromAI: (data: PendingCreateFromAI | null) => void;
     isExpanded: boolean;
     setIsExpanded: (val: boolean) => void;
+    // Folder (thematic category) filter, shared between the sidebar and the library
+    selectedCategory: string | null;
+    setSelectedCategory: (cat: string | null) => void;
 }
 
 export const useDocumentStore = create<DocumentState>((set) => ({
@@ -57,4 +60,6 @@ export const useDocumentStore = create<DocumentState>((set) => ({
     setPendingCreateFromAI: (data) => set({ pendingCreateFromAI: data }),
     isExpanded: false,
     setIsExpanded: (val) => set({ isExpanded: val }),
+    selectedCategory: null,
+    setSelectedCategory: (cat) => set({ selectedCategory: cat }),
 }));

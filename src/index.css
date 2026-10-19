@@ -1,49 +1,62 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap');
 
 :root {
-  /* High-Contrast Professional TecnoKids Theme */
-  --bg-primary: #f8fafc;
-  /* Crisp light gray for workspace */
-  --bg-secondary: #ffffff;
-  /* Pure white for cards */
-  --bg-sidebar: #0f172a;
-  /* Deep slate/navy for sidebar */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-light: #f8fafc;
+  /* TecnoKids Planillas — design tokens */
+  --bg-primary: #F4F6F7;
+  /* Workspace background */
+  --bg-secondary: #FFFFFF;
+  /* Cards and panels */
+  --bg-subtle: #F9FBFB;
+  /* Inputs and quiet surfaces */
+  --bg-sidebar: #0E1A24;
+  /* Deep navy sidebar */
+  --bg-sidebar-line: #1F2E3A;
+
+  --text-primary: #0F172A;
+  --text-secondary: #4B5B67;
+  --text-muted: #5B6B77;
+  --text-strong: #33424D;
+  --text-light: #E6EEF2;
   /* Text on dark backgrounds */
-  --text-muted: #94a3b8;
+  --text-light-muted: #9DB0BB;
 
-  --border-color: #e2e8f0;
-  /* Crisp borders */
-  --border-sidebar: #f1f5f9;
+  --border-color: #E1E7EB;
+  --border-strong: #CBD5DC;
+  --border-soft: #EEF2F4;
 
-  --primary-color: #39B0C4;
-  /* TecnoKids Cyan */
-  --primary-hover: #2dbad1;
-  --primary-light: rgba(57, 176, 196, 0.15);
+  --primary-color: #1B7383;
+  /* Deep teal: buttons, links, active states */
+  --primary-hover: #125A67;
+  --primary-light: #DDF2F5;
+  --accent-color: #39B0C4;
+  /* TecnoKids cyan: brand mark, focus rings */
+  --accent-soft: #F4F9FA;
+  --accent-border: #D5EBEF;
 
-  --danger-color: #f43f5e;
-  --success-color: #10b981;
+  --warm-bg: #FFF6E6;
+  --warm-border: #F5DDB0;
+  --warm-text: #7A4A00;
 
-  --sidebar-width: 240px;
-  /* Slightly wider, relaxed */
-  --right-panel-width: 320px;
+  --danger-color: #B42335;
+  --danger-light: #FDECEE;
+  --success-color: #1F6B3A;
 
-  /* Modern Professional Font (keeping Outfit for brand consistency but can use weights) */
-  --font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  --sidebar-width: 248px;
+  --right-panel-width: 340px;
 
-  /* Amigables, bubbly rounded corners */
+  --font-family: 'Figtree', system-ui, sans-serif;
+  --font-display: 'Outfit', 'Figtree', system-ui, sans-serif;
+
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
 
-  /* Softer, deeper shadows for that floating glass feel */
-  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.14);
 
-  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: all 0.2s ease;
 }
 
 * {
@@ -54,7 +67,6 @@
 
 html {
   font-size: 14px;
-  /* Fix zoom by reducing base scale */
 }
 
 body {
@@ -63,12 +75,19 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
-  /* Prevent horizontal scroll, strictly desktop */
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
 }
 
 input,
 button,
-textarea {
+textarea,
+select {
   font-family: inherit;
 }
 
@@ -78,7 +97,29 @@ button {
   background: none;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 a {
   text-decoration: none;
   color: inherit;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

@@ -4,7 +4,12 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { supabase } from '../../lib/supabase';
 import styles from './FeedbackButton.module.css';
 
-export function FeedbackButton() {
+interface FeedbackButtonProps {
+    triggerClassName?: string;
+    iconClassName?: string;
+}
+
+export function FeedbackButton({ triggerClassName, iconClassName }: FeedbackButtonProps) {
     const { user } = useAuthStore();
     const [isOpen, setIsOpen] = useState(false);
     const [type, setType] = useState<'bug' | 'suggestion'>('bug');
@@ -42,22 +47,24 @@ export function FeedbackButton() {
     };
 
     return (
-        <div className={styles.feedbackWrapper}>
-            {!isOpen && (
-                <button
-                    className={styles.fab}
-                    onClick={() => setIsOpen(true)}
-                    title="Reportar Error o Sugerencia"
-                >
-                    <MessageSquare size={24} />
-                </button>
-            )}
+        <>
+            <button
+                type="button"
+                className={triggerClassName || styles.fab}
+                onClick={() => setIsOpen(!isOpen)}
+                aria-expanded={isOpen}
+                title="Reportar error o sugerencia"
+            >
+                <MessageSquare size={18} aria-hidden="true" className={iconClassName} />
+                {triggerClassName && 'Enviar feedback'}
+            </button>
 
             {isOpen && (
-                <div className={styles.feedbackModal}>
+                <div className={styles.feedbackWrapper}>
+                <div className={styles.feedbackModal} role="dialog" aria-label="Feedback y mejora">
                     <div className={styles.modalHeader}>
                         <h3>Feedback y Mejora</h3>
-                        <button className={styles.closeBtn} onClick={() => setIsOpen(false)}>
+                        <button type="button" className={styles.closeBtn} aria-label="Cerrar" onClick={() => setIsOpen(false)}>
                             <X size={18} />
                         </button>
                     </div>
@@ -110,7 +117,8 @@ export function FeedbackButton() {
                         </form>
                     )}
                 </div>
+                </div>
             )}
-        </div>
+        </>
     );
 }
