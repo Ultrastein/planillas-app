@@ -47,15 +47,13 @@ export function VersionSidebar() {
 
     return (
         <div className={styles.sidebarContainer}>
-            <div className={styles.header}>
-                <History size={18} />
-                <h3>Historial de Versiones</h3>
-            </div>
+            <p className={styles.hint}>Tocá una versión para verla. El editor queda en solo lectura mientras la mirás.</p>
 
             <div className={styles.versionsList}>
                 {/* Special card for "Current View" if previewing an old version to easily go back */}
                 {previewVersion && (
-                    <div
+                    <button
+                        type="button"
                         className={`${styles.versionCard} ${styles.currentReturn}`}
                         onClick={() => setPreviewVersion(null)}
                     >
@@ -66,7 +64,7 @@ export function VersionSidebar() {
                             <span className={styles.versionTitle}>Volver a Edición Actual</span>
                             <span className={styles.versionMeta}>Cerrar vista previa</span>
                         </div>
-                    </div>
+                    </button>
                 )}
 
                 {versions.length === 0 ? (
@@ -77,8 +75,10 @@ export function VersionSidebar() {
                     versions.map((ver) => {
                         const isPreviewing = previewVersion?.id === ver.id;
                         return (
-                            <div
+                            <button
+                                type="button"
                                 key={ver.id}
+                                aria-pressed={isPreviewing}
                                 className={`${styles.versionCard} ${isPreviewing ? styles.active : ''}`}
                                 onClick={() => handlePreview(ver)}
                             >
@@ -96,7 +96,7 @@ export function VersionSidebar() {
                                         {new Date(ver.created_at).toLocaleString()}
                                     </span>
                                 </div>
-                            </div>
+                            </button>
                         );
                     })
                 )}

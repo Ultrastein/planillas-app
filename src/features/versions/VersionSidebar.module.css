@@ -1,7 +1,16 @@
 .sidebarContainer {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    gap: 12px;
+    padding: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+.hint {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.4;
 }
 
 .header {
@@ -35,23 +44,25 @@
     padding: 12px;
     display: flex;
     gap: 12px;
+    width: 100%;
+    text-align: left;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .versionCard:hover {
-    border-color: #94a3b8;
-    background-color: #f8fafc;
+    border-color: var(--border-strong);
+    background-color: var(--bg-subtle);
 }
 
 .versionCard.active {
     border-color: var(--primary-color);
-    background-color: #eff6ff;
+    background-color: var(--primary-light);
 }
 
 .currentReturn {
-    border-color: #f59e0b;
-    background-color: #fffbeb;
+    border-color: var(--warm-border);
+    background-color: var(--warm-bg);
 }
 
 .currentReturn:hover {
@@ -82,7 +93,7 @@
 
 .versionDate {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     margin-top: 4px;
 }
 

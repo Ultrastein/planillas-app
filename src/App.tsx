@@ -40,7 +40,7 @@ function App() {
   }, [setUser, fetchProfile, setLoading]);
 
   if (isLoading) {
-    return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Cargando EduPlan Pro...</div>;
+    return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'var(--text-secondary)', fontSize: 15 }}>Cargando TecnoKids Planillas...</div>;
   }
 
   return (

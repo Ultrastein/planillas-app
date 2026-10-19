@@ -7,11 +7,14 @@ import { useCategoryStore } from '../../store/useCategoryStore';
 import { RichTextEditor } from './RichTextEditor';
 import styles from './DocumentEditor.module.css';
 import * as mammoth from 'mammoth';
-import { Folder, FolderOpen, Plus, FileText, Search, X, ArrowLeft, Maximize2, Minimize2, Copy, Check } from 'lucide-react';
+import { Plus, Search, X, ArrowLeft, ArrowRight, Maximize2, Minimize2, Copy, Check, Link2, Upload, Trash2, Printer, Sparkles, Save, LayoutGrid } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React from 'react';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useToast } from '../../components/Toast/useToast';
 import { QUICK_TEMPLATES } from '../../data/templates';
+import { getCategoryColor } from '../../lib/categoryColors';
 
 export function DocumentEditor() {
     const { profile: user } = useAuthStore();
@@ -26,18 +29,17 @@ export function DocumentEditor() {
         pendingReplacement,
         setPendingReplacement,
         setEditorSelection,
+        selectedCategory,
+        setSelectedCategory,
     } = useDocumentStore();
     const previewVersion = useVersionStore((state: any) => state.previewVersion);
 
-    const { categories, fetchCategories } = useCategoryStore();
+    const { categories } = useCategoryStore();
 
     const [documents, setDocuments] = useState<any[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [filterGrado, setFilterGrado] = useState<string>('');
     const [filterHoras, setFilterHoras] = useState<string>('');
     const [loading, setLoading] = useState(false);
-    const [showNewCatInput, setShowNewCatInput] = useState(false);
-    const [newCatName, setNewCatName] = useState('');
     const [creationNumClase, setCreationNumClase] = useState(''); // New State for Creation Modal Class Number
 
     // New States for Grid Layout
@@ -51,6 +53,7 @@ export function DocumentEditor() {
         setFilterGrado('');
         setFilterHoras('');
         setSearchQuery('');
+        setChainViewNodeId(null);
     }, [selectedCategory]);
 
     // Bug Fix: Clear selected doc if it doesn't belong to the newly filtered list
@@ -112,13 +115,9 @@ export function DocumentEditor() {
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [pendingChainFromDocId, setPendingChainFromDocId] = useState<string | null>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // New states for admin author change and comments
     const [allUsers, setAllUsers] = useState<any[]>([]);
-    const [comments, setComments] = useState<any[]>([]);
-    const [newCommentText, setNewCommentText] = useState('');
-    const [showComments, setShowComments] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
     const [chainViewNodeId, setChainViewNodeId] = useState<string | null>(null);
@@ -133,8 +132,7 @@ export function DocumentEditor() {
 
     useEffect(() => {
         fetchDocs();
-        fetchCategories();
-    }, [fetchCategories]);
+    }, []);
 
     useEffect(() => {
         if (user?.role === 'admin') {
@@ -142,30 +140,12 @@ export function DocumentEditor() {
         }
     }, [user?.role]);
 
-    useEffect(() => {
-        if (selectedDoc) {
-            fetchComments();
-        } else {
-            setComments([]);
-        }
-    }, [selectedDoc?.id]);
-
     const fetchAllUsers = async () => {
         try {
             const { data, error } = await supabase.from('users').select('*');
             if (!error && data) setAllUsers(data);
         } catch (err) {
             console.error("Error fetching users", err);
-        }
-    };
-
-    const fetchComments = async () => {
-        if (!selectedDoc) return;
-        try {
-            const { data, error } = await supabase.from('comments').select('*').eq('document_id', selectedDoc.id).order('created_at', { ascending: true });
-            if (!error && data) setComments(data);
-        } catch (err) {
-            console.error("Error fetching comments", err);
         }
     };
 
@@ -400,7 +380,6 @@ export function DocumentEditor() {
                         .eq('id', docId);
                     if (error) throw error;
                     setSelectedDoc(null);
-                    setHasUnsavedChanges(false);
                     fetchDocs();
                     showToast('Planificación eliminada.', 'success');
                 } catch (err: any) {
@@ -494,7 +473,6 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update({ tematica: newCategory || null }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, tematica: newCategory || null } : prev);
-            setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
             showToast('Error al actualizar temática: ' + err.message, 'error');
@@ -512,7 +490,6 @@ export function DocumentEditor() {
             // Actualizar arreglo local instantáneamente sin llamar a fetchDocs para evitar overwrites (race condition)
             setDocuments((prev: any[]) => prev.map(d => d.id === docId ? { ...d, next_class_id: nextClassId || null } : d));
 
-            setHasUnsavedChanges(true);
         } catch (err: any) {
             console.error('Error al guardar siguiente clase:', err);
             showToast('No se pudo guardar el encadenado. Asegúrese de que la columna "next_class_id" existe en la tabla documents de Supabase. Err: ' + err.message, 'error');
@@ -574,7 +551,6 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update({ num_clase: newNum || null }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, num_clase: newNum || null } : prev);
-            setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
             showToast('Error al guardar número de clase: ' + err.message, 'error');
@@ -586,7 +562,6 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update({ [field]: value || null }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, [field]: value || null } : prev);
-            setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
             showToast(`Error al guardar ${field}: ` + err.message, 'error');
@@ -599,7 +574,6 @@ export function DocumentEditor() {
             if (error) throw error;
             lastHandledContentRef.current = newContent;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, content: newContent } : prev);
-            setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error auto-saving:', err);
         }
@@ -610,7 +584,6 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update({ recursos: newRecursos }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, recursos: newRecursos } : prev);
-            setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error updating recursos:', err);
         }
@@ -621,7 +594,6 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update({ etiquetas: newEtiquetas }).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, etiquetas: newEtiquetas } : prev);
-            setHasUnsavedChanges(true);
         } catch (err) {
             console.error('Error updating etiquetas:', err);
         }
@@ -635,31 +607,9 @@ export function DocumentEditor() {
             const { error } = await supabase.from('documents').update(updates).eq('id', docId);
             if (error) throw error;
             setSelectedDoc((prev: any) => prev?.id === docId ? { ...prev, ...updates } : prev);
-            setHasUnsavedChanges(true);
             fetchDocs();
         } catch (err: any) {
             showToast('Error al actualizar docente: ' + err.message, 'error');
-        }
-    };
-
-    const handleAddComment = async () => {
-        if (!newCommentText.trim() || !user || !selectedDoc) return;
-        try {
-            const { error } = await supabase.from('comments').insert({
-                document_id: selectedDoc.id,
-                author_id: user.id,
-                author_name: user.name,
-                text: newCommentText.trim()
-            });
-            if (error) {
-                // Ignore schema warnings if table is missing, but notify user
-                showToast('Aviso conectando comentarios. Err: ' + error.message, 'warning');
-                return;
-            }
-            setNewCommentText('');
-            fetchComments();
-        } catch (err: any) {
-            console.error('Error adding comment:', err);
         }
     };
 
@@ -752,22 +702,6 @@ export function DocumentEditor() {
 </body>
 </html>`);
         printWindow.document.close();
-    };
-
-    const handleCreateCategory = async () => {
-        if (!newCatName.trim()) return;
-        setLoading(true);
-        try {
-            const { error } = await supabase.from('thematic_categories').insert({ name: newCatName.trim() });
-            if (error) throw error;
-            setNewCatName('');
-            setShowNewCatInput(false);
-            fetchCategories();
-        } catch (err: any) {
-            showToast('Error al crear categoría: ' + err.message, 'error');
-        } finally {
-            setLoading(false);
-        }
     };
 
     const handleSaveDocumentFromAI = async (data: { title: string; content: string; metadata: any }) => {
@@ -903,694 +837,591 @@ export function DocumentEditor() {
     const uniqueGrados = Array.from(new Set(uniqueGradosRaw.filter(Boolean)));
     const uniqueHoras = Array.from(new Set(categoryDocs.map(d => d.carga_horaria).filter(Boolean)));
 
+    const parseClassNum = (val: string | null | undefined) => parseFloat(val?.replace(',', '.') || 'NaN');
+
+    // Linked chain (next_class_id) in reading order, starting from its first class
+    const getOrderedChain = (docId: string) => {
+        let head = documents.find(d => d.id === docId);
+        const visited = new Set<string>();
+        while (head && !visited.has(head.id)) {
+            visited.add(head.id);
+            const prev = documents.find(d => d.next_class_id === head!.id);
+            if (!prev || visited.has(prev.id)) break;
+            head = prev;
+        }
+        const ordered: any[] = [];
+        const seen = new Set<string>();
+        let current = head;
+        while (current && !seen.has(current.id)) {
+            ordered.push(current);
+            seen.add(current.id);
+            current = current.next_class_id ? documents.find(d => d.id === current!.next_class_id) : undefined;
+        }
+        return ordered;
+    };
+
+    const linkedIds = new Set<string>();
+    documents.forEach(d => {
+        if (d.next_class_id) {
+            linkedIds.add(d.id);
+            linkedIds.add(d.next_class_id);
+        }
+    });
+
+    const chainLabelFor = (docId: string) => {
+        if (!linkedIds.has(docId)) return null;
+        const length = getChainIds(docId).length;
+        return length > 1 ? `Cadena · ${length} clases` : null;
+    };
+
+    // Previous / next class: explicit link first, numeric sequence of the same "rama" as fallback
+    let prevClass: any = null;
+    let nextClass: any = null;
+    let sequence: any[] = [];
+    let currentParsedNum = NaN;
+    if (selectedDoc) {
+        currentParsedNum = parseClassNum(selectedDoc.num_clase);
+        const docRama = (selectedDoc.title || '').trim().toLowerCase();
+        const siblingDocs = documents
+            .filter(d =>
+                d.tematica === selectedDoc.tematica &&
+                (d.title || '').trim().toLowerCase() === docRama &&
+                d.id !== selectedDoc.id
+            )
+            .map(d => ({ ...d, parsedNum: parseClassNum(d.num_clase) }))
+            .filter(d => !isNaN(d.parsedNum))
+            .sort((a, b) => a.parsedNum - b.parsedNum);
+
+        const linkedNext = selectedDoc.next_class_id ? documents.find(d => d.id === selectedDoc.next_class_id) : null;
+        const linkedPrev = documents.find(d => d.next_class_id === selectedDoc.id) || null;
+        prevClass = linkedPrev || null;
+        nextClass = linkedNext || null;
+
+        if (!isNaN(currentParsedNum)) {
+            if (!prevClass) prevClass = [...siblingDocs].reverse().find(d => d.parsedNum < currentParsedNum) || null;
+            if (!nextClass) nextClass = siblingDocs.find(d => d.parsedNum > currentParsedNum) || null;
+        }
+
+        const linkedChain = getOrderedChain(selectedDoc.id);
+        if (linkedChain.length > 1) {
+            sequence = linkedChain;
+        } else if (siblingDocs.length > 0 && !isNaN(currentParsedNum)) {
+            sequence = [...siblingDocs, { ...selectedDoc, parsedNum: currentParsedNum }].sort((a, b) => a.parsedNum - b.parsedNum);
+        }
+    }
+
+    const sequencePosition = selectedDoc ? sequence.findIndex(d => d.id === selectedDoc.id) : -1;
+    const hasUncategorized = documents.some(d => !d.tematica);
+    const libraryChips = [
+        { key: 'all', label: 'Todas', value: null as string | null },
+        ...categories.map(c => ({ key: c.id, label: c.name, value: c.name as string | null })),
+        ...(hasUncategorized ? [{ key: 'none', label: 'Sin categorizar', value: 'Sin Categorizar' as string | null }] : []),
+    ];
+
+    const closeDocument = () => {
+        setSelectedDoc(null);
+    };
+
+    const renderField = (label: string, id: string, editable: React.ReactNode, readValue: React.ReactNode) => (
+        <div className={styles.field}>
+            {canEditSelected ? <label htmlFor={id} className={styles.fieldLabel}>{label}</label> : <span className={styles.fieldLabel}>{label}</span>}
+            {canEditSelected ? editable : <span className={styles.fieldValue}>{readValue}</span>}
+        </div>
+    );
+
     return (
         <div className={styles.centerContainer}>
-            {/* GOOGLE DRIVE STYLE HEADER: Horizontally scrollable folders row */}
-            <div className={styles.topFolderRow}>
-                <div className={styles.folderRowHeader}>
-                    <h3>Carpetas de Planificación</h3>
-                    {canCreateDocument && (
-                        <button className={styles.closeBtn} onClick={() => setShowNewCatInput(!showNewCatInput)} title="Nueva Carpeta">
-                            <Plus size={16} />
-                        </button>
-                    )}
-                </div>
-
-                {showNewCatInput && (
-                    <div style={{ display: 'flex', gap: '4px', marginBottom: '12px', maxWidth: '300px' }}>
-                        <input
-                            autoFocus
-                            style={{ flex: 1, padding: '6px 10px', fontSize: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
-                            placeholder="Nombre de temática..."
-                            value={newCatName}
-                            onChange={e => setNewCatName(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleCreateCategory()}
-                        />
-                        <button className={styles.btnPrimary} style={{ padding: '6px 12px' }} onClick={handleCreateCategory} disabled={loading}>OK</button>
-                    </div>
-                )}
-
-                <div
-                    className={styles.foldersContainer}
-                    onWheel={(e) => {
-                        const container = e.currentTarget;
-                        if (e.deltaY !== 0) {
-                            e.preventDefault();
-                            container.scrollLeft += e.deltaY;
-                        }
-                    }}
-                >
-                    <div
-                        className={`${styles.folderChip} ${selectedCategory === null ? styles.activeFolderChip : ''}`}
-                        onClick={() => { setSelectedCategory(null); setFilterGrado(''); setFilterHoras(''); }}
-                    >
-                        {selectedCategory === null ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
-                        <span>Todas</span>
-                    </div>
-                    {categories.map(cat => (
-                        <div
-                            key={cat.id}
-                            className={`${styles.folderChip} ${selectedCategory === cat.name ? styles.activeFolderChip : ''}`}
-                            onClick={() => { setSelectedCategory(cat.name); setFilterGrado(''); setFilterHoras(''); }}
-                        >
-                            {selectedCategory === cat.name ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
-                            <span>{cat.name}</span>
+            {!selectedDoc ? (
+                // LIBRARY VIEW
+                <div className={styles.library}>
+                    <header className={styles.libraryHeader}>
+                        <div className={styles.libraryTitle}>
+                            <h1>{selectedCategory ? (selectedCategory === 'Sin Categorizar' ? 'Sin categorizar' : selectedCategory) : 'Planificaciones'}</h1>
+                            <p>Todas las clases del equipo, ordenadas por cadena y número de clase.</p>
                         </div>
-                    ))}
-                    <div
-                        className={`${styles.folderChip} ${selectedCategory === 'Sin Categorizar' ? styles.activeFolderChip : ''}`}
-                        onClick={() => { setSelectedCategory('Sin Categorizar'); setFilterGrado(''); setFilterHoras(''); }}
-                    >
-                        {selectedCategory === 'Sin Categorizar' ? <FolderOpen size={16} color="var(--primary-color)" /> : <Folder size={16} color="#94a3b8" />}
-                        <span style={{ fontStyle: 'italic', color: '#64748b' }}>Sin Categorizar</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className={styles.lowerWorkspace}>
-                {!selectedDoc ? (
-                    // DASHBOARD GRID VIEW
-                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        <div className={styles.searchFilterArea}>
-                            <div className={styles.searchHeaderRow}>
-                                <div className={styles.searchInputWrapper}>
-                                    <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-                                    <input
-                                        type="text"
-                                        className={styles.searchInput}
-                                        placeholder="Buscar por palabra clave, título o profesor..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        style={{ paddingLeft: '44px' }}
-                                    />
-                                </div>
-                                {canCreateDocument && (
-                                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                                        {user?.role === 'admin' && (
-                                            <button className={styles.btnDanger} onClick={handleEmptyTrash} disabled={loading} style={{ padding: '12px 16px', fontSize: '0.9rem' }} title="Eliminar permanentemente los documentos borrados">
-                                                Vaciar Papelera
-                                            </button>
-                                        )}
-                                        <button className={styles.btnSecondary} onClick={() => setShowBulkImport(true)} style={{ padding: '12px 16px', fontSize: '0.95rem', backgroundColor: '#e2e8f0', color: '#0f172a', border: '1px solid #cbd5e1' }} title="Importar múltiples clases usando un JSON generado por IA externa">
-                                            Importar IA (JSON)
-                                        </button>
-                                        <button className={styles.btnPrimary} onClick={() => setIsCreating(true)} style={{ padding: '12px 24px', fontSize: '1rem' }}>
-                                            + Nueva Clase
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Dropdown Filters beneath search */}
-                            {(uniqueGrados.length > 0 || uniqueHoras.length > 0) && (
-                                <div className={styles.filtersRow}>
-                                    {uniqueGrados.length > 0 && (
-                                        <select
-                                            value={filterGrado}
-                                            onChange={(e) => setFilterGrado(e.target.value)}
-                                            className={styles.filterSelect}
-                                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }}
-                                        >
-                                            <option value="">Todos los Años (Grados)</option>
-                                            {uniqueGrados.map((g: any) => <option key={g} value={g}>{g}</option>)}
-                                        </select>
-                                    )}
-                                    {uniqueHoras.length > 0 && (
-                                        <select
-                                            value={filterHoras}
-                                            onChange={(e) => setFilterHoras(e.target.value)}
-                                            className={styles.filterSelect}
-                                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }}
-                                        >
-                                            <option value="">Todas las Duraciones</option>
-                                            {uniqueHoras.map((h: any) => <option key={h} value={h}>{h}</option>)}
-                                        </select>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className={styles.docsGridContainer}>
-                            {chainViewNodeId && (
-                                <div style={{ padding: '8px 12px', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '6px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #bfdbfe' }}>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>🔗 Mostrando únicamente la cadena de actividades seleccionada.</span>
-                                    <button
-                                        onClick={() => setChainViewNodeId(null)}
-                                        style={{ padding: '4px 10px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                    >
-                                        Mostrar Todas
+                        {canCreateDocument && (
+                            <div className={styles.headerActions}>
+                                {user?.role === 'admin' && (
+                                    <button className={styles.btnGhostDanger} onClick={handleEmptyTrash} disabled={loading} title="Eliminar permanentemente los documentos borrados">
+                                        <Trash2 size={16} aria-hidden="true" /> Vaciar papelera
                                     </button>
-                                </div>
-                            )}
-                            <div className={styles.docsGrid}>
-                                {filteredDocs.map(d => (
-                                    <div key={d.id} className={styles.docCard} onClick={() => setSelectedDoc(d)} style={{ cursor: 'pointer', position: 'relative' }}>
-                                        <div className={styles.cardHeader}>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                                {d.tematica ? (
-                                                    <span className={styles.cardBadge} style={{ backgroundColor: 'var(--primary-color)' }}>
-                                                        {d.tematica}
-                                                    </span>
-                                                ) : (
-                                                    <span className={styles.cardBadge} style={{ backgroundColor: '#94a3b8' }}>
-                                                        Sin Categorizar
-                                                    </span>
-                                                )}
-                                                {/* Indicates chained class visually on the card */}
-                                                {(d.num_clase) && (
-                                                    <span className={styles.cardBadge} style={{ backgroundColor: '#3b82f6', fontSize: '0.7rem' }}>
-                                                        Clase {d.num_clase || '?'} 🔗
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {/* Tag badges */}
-                                            {d.etiquetas && (
-                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
-                                                    {d.etiquetas.split(',').map((tag: string, i: number) => (
-                                                        <span key={i} style={{ backgroundColor: '#e2e8f0', padding: '2px 6px', borderRadius: '12px', fontSize: '0.7rem', color: '#475569' }}>
-                                                            #{tag.trim()}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <h4 className={styles.cardTitle}>{d.title}</h4>
-                                        <div className={styles.cardMeta}>
-                                            <span><strong>Profe:</strong> {d.author_name}</span>
-                                            {d.curso && <span><strong>Año:</strong> {d.grado} {d.anio}</span>}
-                                            {d.carga_horaria && <span><strong>Duración:</strong> {d.carga_horaria}</span>}
-                                        </div>
-                                        <div className={styles.cardAction}>
-                                            Abrir clase &rarr;
-                                        </div>
-                                    </div>
-                                ))}
-                                {filteredDocs.length === 0 && (
-                                    <div className={styles.emptyState}>
-                                        {searchQuery ? "No se encontraron coincidencias para tu búsqueda." : "No hay planificaciones en esta categoría."}
-                                    </div>
                                 )}
+                                <button className={styles.btnSecondary} onClick={() => setShowBulkImport(true)} title="Importar múltiples clases usando un JSON generado por IA externa">
+                                    <Upload size={16} aria-hidden="true" /> Importar JSON
+                                </button>
+                                <button className={styles.btnPrimary} onClick={() => setIsCreating(true)}>
+                                    <Plus size={16} aria-hidden="true" /> Nueva clase
+                                </button>
                             </div>
+                        )}
+                    </header>
+
+                    <div className={styles.filterCard}>
+                        <div className={styles.filterRow}>
+                            <div className={styles.searchInputWrapper}>
+                                <label htmlFor="doc-search" className="sr-only">Buscar</label>
+                                <Search size={18} aria-hidden="true" className={styles.searchIcon} />
+                                <input
+                                    id="doc-search"
+                                    type="search"
+                                    className={styles.searchInput}
+                                    placeholder="Buscar por título o docente"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            {uniqueGrados.length > 0 && (
+                                <>
+                                    <label htmlFor="filter-grado" className="sr-only">Año</label>
+                                    <select id="filter-grado" value={filterGrado} onChange={(e) => setFilterGrado(e.target.value)} className={styles.filterSelect}>
+                                        <option value="">Todos los años</option>
+                                        {uniqueGrados.map((g: any) => <option key={g} value={g}>{g}</option>)}
+                                    </select>
+                                </>
+                            )}
+                            {uniqueHoras.length > 0 && (
+                                <>
+                                    <label htmlFor="filter-horas" className="sr-only">Duración</label>
+                                    <select id="filter-horas" value={filterHoras} onChange={(e) => setFilterHoras(e.target.value)} className={styles.filterSelect}>
+                                        <option value="">Toda duración</option>
+                                        {uniqueHoras.map((h: any) => <option key={h} value={h}>{h}</option>)}
+                                    </select>
+                                </>
+                            )}
+                        </div>
+                        <div role="group" aria-label="Temática" className={styles.chipRow}>
+                            {libraryChips.map(chip => (
+                                <button
+                                    key={chip.key}
+                                    type="button"
+                                    aria-pressed={selectedCategory === chip.value}
+                                    className={`${styles.chip} ${selectedCategory === chip.value ? styles.chipActive : ''}`}
+                                    onClick={() => setSelectedCategory(chip.value)}
+                                >
+                                    {chip.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
-                ) : (
-                    // DOCUMENT VIEWER VIEW
-                    <div style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
 
-                        {/* METADATA FORM AS LEFT PANEL IN LOWER WORKSPACE */}
-                        {selectedDoc && (selectedDoc.curso || canEditSelected) && (
-                            <div className={styles.aiMetadata} style={{ flex: '0 0 320px', margin: 0, padding: '24px', borderRight: '1px solid var(--border-color)', borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRadius: 0, overflowY: 'auto', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>Detalles de Clase</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Curso:</span>
-                                    {canEditSelected ? (
+                    {chainViewNodeId && (
+                        <div className={styles.chainBanner}>
+                            <span><Link2 size={16} aria-hidden="true" /> Mostrando solo la cadena de actividades seleccionada.</span>
+                            <button type="button" onClick={() => setChainViewNodeId(null)}>Mostrar todas</button>
+                        </div>
+                    )}
+
+                    <div className={styles.resultsBar}>
+                        <span>{filteredDocs.length} {filteredDocs.length === 1 ? 'clase' : 'clases'}</span>
+                        <span className={styles.resultsSort}>Orden: N° de clase</span>
+                    </div>
+
+                    <div className={styles.docsGrid}>
+                        {filteredDocs.map(d => {
+                            const color = getCategoryColor(d.tematica);
+                            const chainLabel = chainLabelFor(d.id);
+                            const metaParts = [[d.grado, d.anio].filter(Boolean).join(' '), d.carga_horaria].filter(Boolean);
+                            return (
+                                <button key={d.id} type="button" className={styles.docCard} onClick={() => setSelectedDoc(d)}>
+                                    <span className={styles.cardTop}>
+                                        <span className={styles.cardBadge} style={{ background: color.bg, color: color.fg }}>
+                                            {d.tematica || 'Sin categorizar'}
+                                        </span>
+                                        {d.num_clase && <span className={styles.cardNumber}>Clase {d.num_clase}</span>}
+                                    </span>
+                                    <span className={styles.cardBody}>
+                                        <span className={styles.cardTitle}>{d.title}</span>
+                                        {metaParts.length > 0 && <span className={styles.cardMeta}>{metaParts.join(' · ')}</span>}
+                                    </span>
+                                    {chainLabel && (
+                                        <span className={styles.cardChain}>
+                                            <Link2 size={14} aria-hidden="true" /> {chainLabel}
+                                        </span>
+                                    )}
+                                    {d.etiquetas && (
+                                        <span className={styles.cardTags}>
+                                            {d.etiquetas.split(',').map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
+                                                <span key={i} className={styles.tagChip}>{tag}</span>
+                                            ))}
+                                        </span>
+                                    )}
+                                    <span className={styles.cardFooter}>
+                                        <span>{d.author_name}</span>
+                                        {d.created_at && <span>{formatDistanceToNow(new Date(d.created_at), { addSuffix: true, locale: es })}</span>}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                        {filteredDocs.length === 0 && (
+                            <div className={styles.emptyState}>
+                                {searchQuery ? 'No se encontraron coincidencias para tu búsqueda.' : 'No hay planificaciones en esta carpeta.'}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                // OPEN CLASS VIEW
+                <div className={styles.docView}>
+                    <header className={styles.docTopbar}>
+                        <button type="button" className={styles.backLink} onClick={closeDocument}>
+                            <ArrowLeft size={18} aria-hidden="true" /> Planificaciones
+                        </button>
+                        <div className={styles.docHeading}>
+                            <span className={styles.docEyebrow}>
+                                {selectedDoc.tematica || 'Sin categorizar'}
+                                {selectedDoc.num_clase && ` · Clase ${selectedDoc.num_clase}${sequence.length > 1 && sequencePosition >= 0 ? ` de ${sequence.length}` : ''}`}
+                            </span>
+                            <h1>{selectedDoc.title}</h1>
+                        </div>
+                        {previewVersion && (
+                            <span className={styles.previewNotice}>Viendo una versión anterior</span>
+                        )}
+                        <div className={styles.docActions}>
+                            {selectedDoc.file_url && (
+                                <button
+                                    className={styles.btnSecondary}
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(selectedDoc.file_url);
+                                        setCopiedLink(true);
+                                        setTimeout(() => setCopiedLink(false), 2000);
+                                    }}
+                                    title="Copiar enlace del documento"
+                                >
+                                    {copiedLink ? <><Check size={16} aria-hidden="true" /> Copiado</> : <><Copy size={16} aria-hidden="true" /> Copiar enlace</>}
+                                </button>
+                            )}
+                            <button
+                                className={styles.btnSecondary}
+                                onClick={() => setIsExpanded(!isExpanded)}
+                                title={isExpanded ? 'Restaurar tamaño' : 'Expandir a pantalla completa'}
+                            >
+                                {isExpanded ? <><Minimize2 size={16} aria-hidden="true" /> Contraer</> : <><Maximize2 size={16} aria-hidden="true" /> Expandir</>}
+                            </button>
+                            {canEditSelected && (
+                                <>
+                                    <button className={styles.btnSecondary} onClick={handleDuplicate} disabled={loading} title="Crear una copia de esta clase">
+                                        <Copy size={16} aria-hidden="true" /> Duplicar
+                                    </button>
+                                    {selectedDoc.file_type === 'editor' && (
+                                        <button className={styles.btnSecondary} onClick={handleExportPDF} title="Exportar como PDF para imprimir">
+                                            <Printer size={16} aria-hidden="true" /> Exportar PDF
+                                        </button>
+                                    )}
+                                    <button className={styles.btnGhostDanger} onClick={() => handleDelete(selectedDoc.id)}>
+                                        <Trash2 size={16} aria-hidden="true" /> Eliminar
+                                    </button>
+                                    {selectedDoc.file_type === 'editor' && (
+                                        <button className={styles.btnPrimary} onClick={handleCreateVersion} disabled={loading}>
+                                            <Save size={16} aria-hidden="true" /> Guardar versión
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </header>
+
+                    <div className={styles.docBody}>
+                        {/* DETAILS PANEL */}
+                        <section aria-label="Detalles de la clase" className={styles.detailsPanel}>
+                            <h2 className={styles.panelTitle}>Detalles</h2>
+
+                            <div className={styles.fieldGrid}>
+                                {renderField('Clase N°', 'f-num',
+                                    <input
+                                        id="f-num"
+                                        type="text"
+                                        className={styles.input}
+                                        value={selectedDoc.num_clase || ''}
+                                        onChange={(e) => setSelectedDoc({ ...selectedDoc, num_clase: e.target.value })}
+                                        onBlur={(e) => handleUpdateNumClase(selectedDoc.id, e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                    />,
+                                    selectedDoc.num_clase || '—'
+                                )}
+                                {renderField('Curso', 'f-curso',
+                                    <input
+                                        id="f-curso"
+                                        type="text"
+                                        className={styles.input}
+                                        value={selectedDoc.curso || ''}
+                                        onChange={(e) => setSelectedDoc({ ...selectedDoc, curso: e.target.value })}
+                                        onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'curso', e.target.value)}
+                                        placeholder="Ej: Historia"
+                                    />,
+                                    selectedDoc.curso || 'No especificado'
+                                )}
+                            </div>
+
+                            <div className={styles.fieldGrid}>
+                                {renderField('Grado', 'f-grado',
+                                    <input
+                                        id="f-grado"
+                                        type="text"
+                                        className={styles.input}
+                                        value={selectedDoc.grado || ''}
+                                        onChange={(e) => setSelectedDoc({ ...selectedDoc, grado: e.target.value })}
+                                        onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'grado', e.target.value)}
+                                        placeholder="Ej: 1ro, 2do"
+                                        title="Podés ingresar varios grados separados por coma"
+                                    />,
+                                    selectedDoc.grado || '—'
+                                )}
+                                {renderField('Año', 'f-anio',
+                                    <input
+                                        id="f-anio"
+                                        type="text"
+                                        className={styles.input}
+                                        value={selectedDoc.anio || ''}
+                                        onChange={(e) => setSelectedDoc({ ...selectedDoc, anio: e.target.value })}
+                                        onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'anio', e.target.value)}
+                                        placeholder="Año"
+                                    />,
+                                    selectedDoc.anio || '—'
+                                )}
+                            </div>
+
+                            {renderField('Duración', 'f-horas',
+                                <input
+                                    id="f-horas"
+                                    type="text"
+                                    className={styles.input}
+                                    value={selectedDoc.carga_horaria || ''}
+                                    onChange={(e) => setSelectedDoc({ ...selectedDoc, carga_horaria: e.target.value })}
+                                    onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'carga_horaria', e.target.value)}
+                                    placeholder="Ej: 2 horas cátedra"
+                                />,
+                                selectedDoc.carga_horaria || 'No especificada'
+                            )}
+
+                            {renderField('Temática', 'f-tematica',
+                                <select
+                                    id="f-tematica"
+                                    className={styles.input}
+                                    value={selectedDoc.tematica || ''}
+                                    onChange={(e) => handleUpdateCategory(selectedDoc.id, e.target.value)}
+                                >
+                                    <option value="">Sin categorizar</option>
+                                    {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                </select>,
+                                selectedDoc.tematica || 'Sin categorizar'
+                            )}
+
+                            <div className={styles.field}>
+                                {user?.role === 'admin' ? (
+                                    <>
+                                        <label htmlFor="f-autor" className={styles.fieldLabel}>Docente</label>
+                                        <select
+                                            id="f-autor"
+                                            className={styles.input}
+                                            value={selectedDoc.author_id}
+                                            onChange={(e) => handleUpdateAuthor(selectedDoc.id, e.target.value)}
+                                            title="Cambiar el docente asignado a esta clase (solo admins)"
+                                        >
+                                            {allUsers.map((u) => (
+                                                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                                            ))}
+                                        </select>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className={styles.fieldLabel}>Docente</span>
+                                        <span className={styles.fieldValue}>{selectedDoc.author_name}</span>
+                                    </>
+                                )}
+                                <span className={styles.fieldHint}>
+                                    {selectedDoc.author_role} · creada el {new Date(selectedDoc.created_at).toLocaleDateString('es-AR')}
+                                </span>
+                            </div>
+
+                            <div className={styles.field}>
+                                {canEditSelected ? (
+                                    <>
+                                        <label htmlFor="f-tags" className={styles.fieldLabel}>Etiquetas</label>
                                         <input
+                                            id="f-tags"
                                             type="text"
-                                            value={selectedDoc.curso || ''}
-                                            onChange={(e) => setSelectedDoc({ ...selectedDoc, curso: e.target.value })}
-                                            onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'curso', e.target.value)}
-                                            style={{ width: '100%', padding: '8px', fontSize: '0.9rem', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
-                                            placeholder="Ej: Historia"
-                                        />
-                                    ) : (
-                                        <span style={{ fontSize: '0.9rem', padding: '8px', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '4px' }}>{selectedDoc.curso || 'No especificado'}</span>
-                                    )}
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Grado y Año:</span>
-                                    {canEditSelected ? (
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <input
-                                                type="text"
-                                                value={selectedDoc.grado || ''}
-                                                onChange={(e) => setSelectedDoc({ ...selectedDoc, grado: e.target.value })}
-                                                onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'grado', e.target.value)}
-                                                style={{ flex: 2, padding: '8px', fontSize: '0.9rem', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
-                                                placeholder="Ej: 1ro, 2do"
-                                                title="Puedes ingresar varios grados"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={selectedDoc.anio || ''}
-                                                onChange={(e) => setSelectedDoc({ ...selectedDoc, anio: e.target.value })}
-                                                onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'anio', e.target.value)}
-                                                style={{ flex: 1, padding: '8px', fontSize: '0.9rem', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
-                                                placeholder="Año"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <span style={{ fontSize: '0.9rem', padding: '8px', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '4px' }}>{selectedDoc.grado} {selectedDoc.anio}</span>
-                                    )}
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Clase N°:</span>
-                                    {canEditSelected ? (
-                                        <input
-                                            type="text"
-                                            value={selectedDoc.num_clase || ''}
-                                            onChange={(e) => setSelectedDoc({ ...selectedDoc, num_clase: e.target.value })}
-                                            onBlur={(e) => handleUpdateNumClase(selectedDoc.id, e.target.value)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                                            style={{ width: '100%', padding: '8px', fontSize: '0.9rem', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
-                                        />
-                                    ) : (
-                                        <span style={{ fontSize: '0.9rem', padding: '8px', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '4px' }}>{selectedDoc.num_clase || '?'}</span>
-                                    )}
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Carga Horaria:</span>
-                                    {canEditSelected ? (
-                                        <input
-                                            type="text"
-                                            value={selectedDoc.carga_horaria || ''}
-                                            onChange={(e) => setSelectedDoc({ ...selectedDoc, carga_horaria: e.target.value })}
-                                            onBlur={(e) => handleUpdateMetadataField(selectedDoc.id, 'carga_horaria', e.target.value)}
-                                            style={{ width: '100%', padding: '8px', fontSize: '0.9rem', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
-                                            placeholder="Ej: 2 horas cátedra"
-                                        />
-                                    ) : (
-                                        <span style={{ fontSize: '0.9rem', padding: '8px', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '4px' }}>{selectedDoc.carga_horaria || 'No especificada'}</span>
-                                    )}
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Materiales y Recursos:</span>
-                                    {canEditSelected ? (
-                                        <textarea
-                                            value={selectedDoc.recursos || ''}
-                                            onChange={(e) => setSelectedDoc({ ...selectedDoc, recursos: e.target.value })}
-                                            onBlur={(e) => handleUpdateRecursos(selectedDoc.id, e.target.value)}
-                                            style={{ width: '100%', flex: 1, minHeight: '120px', padding: '8px', fontSize: '0.9rem', borderRadius: '4px', border: '1px solid #cbd5e1', backgroundColor: '#fff', resize: 'vertical' }}
-                                            placeholder="Escribe aquí los recursos necesarios..."
-                                        />
-                                    ) : (
-                                        <div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', backgroundColor: '#fff', padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0', flex: 1 }}>
-                                            {selectedDoc.recursos || 'No hay recursos.'}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Etiquetas:</span>
-                                    {canEditSelected ? (
-                                        <input
-                                            type="text"
+                                            className={styles.input}
                                             value={selectedDoc.etiquetas || ''}
                                             onChange={(e) => setSelectedDoc({ ...selectedDoc, etiquetas: e.target.value })}
                                             onBlur={(e) => handleUpdateEtiquetas(selectedDoc.id, e.target.value)}
                                             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                                            style={{ width: '100%', padding: '8px', fontSize: '0.9rem', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: '#fff' }}
-                                            placeholder="examen, lectura..."
+                                            placeholder="arduino, taller, examen"
                                         />
-                                    ) : (
-                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                            {selectedDoc.etiquetas ? selectedDoc.etiquetas.split(',').map((tag: string, i: number) => (
-                                                <span key={i} style={{ backgroundColor: '#e2e8f0', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', color: '#475569' }}>
-                                                    #{tag.trim()}
-                                                </span>
-                                            )) : <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>Sin etiquetas</span>}
-                                        </div>
-                                    )}
-                                </div>
+                                    </>
+                                ) : (
+                                    <span className={styles.fieldLabel}>Etiquetas</span>
+                                )}
+                                {selectedDoc.etiquetas ? (
+                                    <div className={styles.cardTags}>
+                                        {selectedDoc.etiquetas.split(',').map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
+                                            <span key={i} className={styles.tagChip}>{tag}</span>
+                                        ))}
+                                    </div>
+                                ) : !canEditSelected && <span className={styles.fieldHint}>Sin etiquetas</span>}
                             </div>
-                        )}
 
-                        {/* DOCUMENT VIEWER MAIN AREA */}
-                        <div className={styles.viewerArea} style={{ position: 'relative' }}>
-                            {selectedDoc ? (
-                                <>
-                                    <div className={styles.docRibbon}>
-                                        <div style={{ flex: 1, paddingRight: '40px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                                <h2>{selectedDoc.title}</h2>
-                                                <button
-                                                    className={hasUnsavedChanges ? styles.btnPrimary : styles.btnSecondary}
-                                                    onClick={() => {
-                                                        setSelectedDoc(null);
-                                                        setHasUnsavedChanges(false);
-                                                    }}
-                                                    style={{ margin: 0, padding: '8px 20px', borderRadius: '8px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                                    title={hasUnsavedChanges ? "Guarda los cambios y vuelve al inicio" : "Cerrar documento"}
-                                                >
-                                                    {hasUnsavedChanges ? "Guardar y Cerrar *" : "Cerrar"} <ArrowLeft size={18} style={{ transform: 'rotate(180deg)' }} />
-                                                </button>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                                                <p style={{ margin: 0 }}><strong>Autor:</strong></p>
-                                                {user?.role === 'admin' ? (
-                                                    <select
-                                                        value={selectedDoc.author_id}
-                                                        onChange={(e) => handleUpdateAuthor(selectedDoc.id, e.target.value)}
-                                                        style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
-                                                        title="Cambiar el docente asignado a esta clase (solo Admins)"
-                                                    >
-                                                        {allUsers.map((u) => (
-                                                            <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                                                        ))}
-                                                    </select>
-                                                ) : (
-                                                    <p style={{ margin: 0 }}>{selectedDoc.author_name}</p>
-                                                )}
-                                                <p style={{ margin: 0, marginLeft: '8px' }}>| <strong>Rol:</strong> {selectedDoc.author_role} | <strong>Fecha:</strong> {new Date(selectedDoc.created_at).toLocaleString()}</p>
-                                            </div>
+                            {renderField('Materiales y recursos', 'f-recursos',
+                                <textarea
+                                    id="f-recursos"
+                                    rows={4}
+                                    className={styles.textarea}
+                                    value={selectedDoc.recursos || ''}
+                                    onChange={(e) => setSelectedDoc({ ...selectedDoc, recursos: e.target.value })}
+                                    onBlur={(e) => handleUpdateRecursos(selectedDoc.id, e.target.value)}
+                                    placeholder="Escribí aquí los recursos necesarios"
+                                />,
+                                <span style={{ whiteSpace: 'pre-wrap' }}>{selectedDoc.recursos || 'No hay recursos cargados.'}</span>
+                            )}
 
-                                            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Temática:</span>
-                                                    {canEditSelected ? (
-                                                        <select
-                                                            value={selectedDoc.tematica || ''}
-                                                            onChange={(e) => handleUpdateCategory(selectedDoc.id, e.target.value)}
-                                                            style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: '#f8fafc' }}
-                                                        >
-                                                            <option value="">-- Sin Categorizar --</option>
-                                                            {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                                        </select>
-                                                    ) : (
-                                                        <span className={styles.badge} style={{ margin: 0, backgroundColor: 'var(--text-secondary)' }}>{selectedDoc.tematica || 'Sin Categorizar'}</span>
-                                                    )}
-                                                </div>
+                            {canEditSelected && (
+                                <button className={styles.btnAi} onClick={handleAIScan} disabled={loading}>
+                                    <Sparkles size={16} aria-hidden="true" />
+                                    {loading ? 'Analizando documento...' : 'Completar detalles con IA'}
+                                </button>
+                            )}
 
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px' }}>
-
-                                                    <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
-                                                        {(() => {
-                                                            // Dynamically compute Next and Previous classes based strictly on numerical sequence
-                                                            const docTematica = selectedDoc.tematica;
-                                                            const currentParsedNum = parseFloat(selectedDoc.num_clase?.replace(',', '.') || 'NaN');
-
-                                                            // Filter docs in same tematica AND exact same branch (Rama/title) with valid numbers
-                                                            const docRama = (selectedDoc.title || '').trim().toLowerCase();
-                                                            const siblingDocs = documents
-                                                                .filter(d =>
-                                                                    d.tematica === docTematica &&
-                                                                    (d.title || '').trim().toLowerCase() === docRama &&
-                                                                    d.id !== selectedDoc.id
-                                                                )
-                                                                .map(d => ({ ...d, parsedNum: parseFloat(d.num_clase?.replace(',', '.') || 'NaN') }))
-                                                                .filter(d => !isNaN(d.parsedNum))
-                                                                .sort((a, b) => a.parsedNum - b.parsedNum); // Ascending order
-
-                                                            // --- Navigation Logic ---
-                                                            // Priority 1: Use explicit next_class_id link if set
-                                                            const linkedNext = selectedDoc.next_class_id
-                                                                ? documents.find(d => d.id === selectedDoc.next_class_id)
-                                                                : null;
-
-                                                            // Find which document points TO this one (prev via next_class_id)
-                                                            const linkedPrev = documents.find(d => d.next_class_id === selectedDoc.id) || null;
-
-                                                            // Priority 2: Fall back to numerical sequence
-                                                            let prevClass = linkedPrev || null;
-                                                            let nextClass = linkedNext || null;
-
-                                                            if (!linkedPrev || !linkedNext) {
-                                                                if (!isNaN(currentParsedNum)) {
-                                                                    if (!prevClass) {
-                                                                        prevClass = [...siblingDocs].reverse().find(d => d.parsedNum < currentParsedNum) || null;
-                                                                    }
-                                                                    if (!nextClass) {
-                                                                        nextClass = siblingDocs.find(d => d.parsedNum > currentParsedNum) || null;
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            return (
-                                                                <>
-                                                                    {prevClass && (
-                                                                        <button
-                                                                            onClick={() => setSelectedDoc(documents.find(d => d.id === prevClass.id))}
-                                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                                            title={`Ir a ${prevClass.title}`}
-                                                                        >
-                                                                            &larr; Clase Anterior ({prevClass.num_clase})
-                                                                        </button>
-                                                                    )}
-                                                                    {nextClass && (
-                                                                        <button
-                                                                            onClick={() => setSelectedDoc(documents.find(d => d.id === nextClass.id))}
-                                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                                            title={`Ir a ${nextClass.title}`}
-                                                                        >
-                                                                            Siguiente Clase ({nextClass.num_clase}) &rarr;
-                                                                        </button>
-                                                                    )}
-                                                                    {(prevClass || nextClass || !isNaN(currentParsedNum)) && (
-                                                                        <>
-                                                                            {/* Ver cadena completa aislada */}
-                                                                            <button
-                                                                                onClick={async () => {
-                                                                                    setChainViewNodeId(selectedDoc.id);
-                                                                                    setSelectedDoc(null);
-                                                                                }}
-                                                                                style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#fcd34d', color: '#92400e', border: '1px solid #fbbf24', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                                                title="Aislar y ver toda esta cadena de actividades"
-                                                                            >
-                                                                                🔗 Ver esta Cadena
-                                                                            </button>
-
-                                                                            {/* Ver temática completa */}
-                                                                            <button
-                                                                                onClick={async () => {
-                                                                                    const categoryId = selectedDoc.tematica || 'Sin Categorizar';
-                                                                                    if (selectedCategory !== categoryId) setSelectedCategory(categoryId);
-                                                                                    setChainViewNodeId(null); // disable chain view if enabled
-                                                                                    // This acts as "ver temática completa" and lists sorted numerically (already sorted in filteredDocs logic)
-                                                                                    setSelectedDoc(null);
-                                                                                }}
-                                                                                style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#e2e8f0', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                                                title="Ver todas las clases de esta temática (mezcladas) en la cuadrícula"
-                                                                            >
-                                                                                Ver temática
-                                                                            </button>
-                                                                        </>
-                                                                    )}
-                                                                    {!nextClass && canEditSelected && !isNaN(currentParsedNum) && (
-                                                                        <button
-                                                                            onClick={handleCreateNextClassQuickAction}
-                                                                            style={{ padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#dbeafe', color: 'var(--primary-hover)', border: '1px solid currentColor', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                                            title="Crear una nueva clase conectada a esta"
-                                                                        >
-                                                                            <Plus size={14} /> Añadir Siguiente
-                                                                        </button>
-                                                                    )}
-                                                                </>
-                                                            );
-                                                        })()}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-
-                                        </div>
-                                        <div className={styles.ribbonActions}>
-                                            {selectedDoc.file_url && (
-                                                <button
-                                                    className={styles.btnSecondary}
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(selectedDoc.file_url);
-                                                        setCopiedLink(true);
-                                                        setTimeout(() => setCopiedLink(false), 2000);
-                                                    }}
-                                                    title="Copiar enlace del documento"
-                                                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                >
-                                                    {copiedLink ? <><Check size={16} color="green" /> Copiado</> : <><Copy size={16} /> Copiar Enlace</>}
-                                                </button>
-                                            )}
-                                            <button
-                                                className={styles.btnSecondary}
-                                                onClick={() => setIsExpanded(!isExpanded)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                title={isExpanded ? "Restaurar tamaño" : "Expandir a pantalla completa"}
-                                            >
-                                                {isExpanded ? <><Minimize2 size={16} /> Contraer</> : <><Maximize2 size={16} /> Expandir</>}
-                                            </button>
-                                            {canEditSelected && (
-                                                <>
-                                                    {selectedDoc.file_type === 'editor' && (
-                                                        <>
-                                                            <button
-                                                                className={styles.btnSecondary}
-                                                                onClick={handleExportPDF}
-                                                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                                title="Exportar como PDF para imprimir"
-                                                            >
-                                                                🖨️ Exportar PDF
-                                                            </button>
-                                                            <button className={styles.btnPrimary} onClick={handleCreateVersion} disabled={loading}>
-                                                                Guardar Versión
-                                                            </button>
-                                                        </>
-                                                    )}
+                            {(sequence.length > 1 || prevClass || nextClass || !isNaN(currentParsedNum)) && (
+                                <div className={styles.chainSection}>
+                                    <span className={styles.fieldLabel}>Cadena de actividades</span>
+                                    {sequence.length > 1 && (
+                                        <ol className={styles.chainList}>
+                                            {sequence.map((d, i) => (
+                                                <li key={d.id}>
                                                     <button
-                                                        className={styles.btnSecondary}
-                                                        onClick={handleDuplicate}
-                                                        disabled={loading}
-                                                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                        title="Crear una copia de esta clase"
+                                                        type="button"
+                                                        aria-current={d.id === selectedDoc.id ? 'step' : undefined}
+                                                        className={`${styles.chainItem} ${d.id === selectedDoc.id ? styles.chainItemActive : ''}`}
+                                                        onClick={() => d.id !== selectedDoc.id && setSelectedDoc(documents.find(x => x.id === d.id))}
                                                     >
-                                                        <Copy size={16} /> Duplicar
+                                                        <span className={styles.chainNum}>{d.num_clase || i + 1}</span>
+                                                        <span className={styles.chainTitle}>{d.title}</span>
                                                     </button>
-                                                    <button className={styles.btnDanger} onClick={() => handleDelete(selectedDoc.id)}>Eliminar</button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.previewContainer} style={isExpanded ? { position: 'absolute', inset: 0, zIndex: 50, backgroundColor: 'white' } : {}}>
-                                        {isExpanded && (
-                                            <button
-                                                onClick={() => setIsExpanded(false)}
-                                                style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 60, padding: '8px 12px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: 'var(--shadow-md)' }}
-                                                title="Contraer"
-                                            >
-                                                <Minimize2 size={16} /> Contraer
+                                                </li>
+                                            ))}
+                                        </ol>
+                                    )}
+                                    <div className={styles.chainNav}>
+                                        {prevClass && (
+                                            <button type="button" className={styles.btnSmall} onClick={() => setSelectedDoc(documents.find(d => d.id === prevClass.id))} title={`Ir a ${prevClass.title}`}>
+                                                <ArrowLeft size={14} aria-hidden="true" /> Anterior
                                             </button>
                                         )}
-                                        {selectedDoc.file_type === 'pdf' && selectedDoc.file_url && (
-                                            <iframe src={selectedDoc.file_url} width="100%" height="100%" title="PDF Prev" />
+                                        {nextClass && (
+                                            <button type="button" className={styles.btnSmall} onClick={() => setSelectedDoc(documents.find(d => d.id === nextClass.id))} title={`Ir a ${nextClass.title}`}>
+                                                Siguiente <ArrowRight size={14} aria-hidden="true" />
+                                            </button>
                                         )}
-                                        {selectedDoc.file_type === 'word' && (
-                                            <div className={styles.wordPreview}>
-                                                {selectedDoc.file_url && <div style={{ marginBottom: 10 }}><a href={selectedDoc.file_url} target="_blank" rel="noreferrer">Descargar Original (.docx)</a></div>}
-                                                {selectedDoc.content || 'Vista previa no disponible.'}
-                                            </div>
-                                        )}
-                                        {selectedDoc.file_type === 'gdoc' && selectedDoc.file_url && (
-                                            <iframe
-                                                src={selectedDoc.file_url.includes('/edit') ? selectedDoc.file_url.replace(/\/edit.*$/, '/preview') : selectedDoc.file_url}
-                                                width="100%"
-                                                height="100%"
-                                                title="GDoc Prev"
-                                            />
-                                        )}
-                                        {selectedDoc.file_type === 'editor' && (
-                                            <div className={styles.editorWrapper}>
-                                                <RichTextEditor
-                                                    content={previewVersion ? (previewVersion.content || '') : (selectedDoc.content || '')}
-                                                    onSave={(newContent) => handleAutoSave(selectedDoc.id, newContent)}
-                                                    readOnly={!canEditSelected || !!previewVersion}
-                                                    onSelectionChange={canEditSelected ? handleEditorSelectionChange : undefined}
-                                                    selectionReplace={pendingReplace}
-                                                    onSelectionReplaceDone={() => {
-                                                        setPendingReplace(null);
-                                                        setPendingReplacement(null);
-                                                        setEditorSelection(null);
-                                                    }}
-                                                />
-                                            </div>
+                                        {!nextClass && canEditSelected && !isNaN(currentParsedNum) && (
+                                            <button type="button" className={styles.btnSmall} onClick={handleCreateNextClassQuickAction} title="Crear una nueva clase conectada a esta">
+                                                <Plus size={14} aria-hidden="true" /> Añadir siguiente
+                                            </button>
                                         )}
                                     </div>
-
-                                    {/* COMMENTS SECTION TOGGLE & AI ACTIONS*/}
-                                    <div className={styles.commentsContainer}>
-                                        {canEditSelected && (
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                                                <button
-                                                    className={styles.btnSecondary}
-                                                    onClick={handleAIScan}
-                                                    disabled={loading}
-                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--primary-color)', color: 'white', border: 'none' }}
-                                                >
-                                                    ✨ {loading ? 'Analizando documento...' : 'Analizar con IA'}
-                                                </button>
-                                            </div>
-                                        )}
-                                        <div
-                                            className={styles.commentsHeader}
-                                            onClick={() => setShowComments(!showComments)}
-                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '12px 16px', background: 'var(--primary-light)', borderRadius: 'var(--radius-sm)' }}
+                                    <div className={styles.chainNav}>
+                                        <button
+                                            type="button"
+                                            className={styles.btnLink}
+                                            onClick={() => { setChainViewNodeId(selectedDoc.id); setSelectedDoc(null); }}
+                                            title="Aislar y ver toda esta cadena en la biblioteca"
                                         >
-                                            <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--primary-color)' }}>
-                                                💬 Comentarios y Sugerencias ({comments.length})
-                                            </h4>
-                                            <span style={{ fontSize: '1.2rem', color: 'var(--primary-color)', transform: showComments ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
-                                                ▼
-                                            </span>
-                                        </div>
-
-                                        {showComments && (
-                                            <div className={styles.commentsContent} style={{ paddingTop: '16px' }}>
-                                                <div className={styles.commentsList}>
-                                                    {comments.length === 0 ? (
-                                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Aún no hay comentarios. Sé el primero en opinar.</p>
-                                                    ) : (
-                                                        comments.map(comment => (
-                                                            <div key={comment.id} className={styles.commentItem}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                                    <strong>{comment.author_name}</strong>
-                                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(comment.created_at).toLocaleString()}</span>
-                                                                </div>
-                                                                <p style={{ margin: 0, fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{comment.text}</p>
-                                                            </div>
-                                                        ))
-                                                    )}
-                                                </div>
-                                                <div className={styles.addCommentBox}>
-                                                    <textarea
-                                                        value={newCommentText}
-                                                        onChange={(e) => setNewCommentText(e.target.value)}
-                                                        placeholder="Escribe un comentario o sugerencia sobre esta clase..."
-                                                        style={{ width: '100%', minHeight: '60px', padding: '10px', fontSize: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', resize: 'vertical' }}
-                                                    />
-                                                    <button
-                                                        className={styles.btnPrimary}
-                                                        style={{ alignSelf: 'flex-end', marginTop: '8px' }}
-                                                        onClick={handleAddComment}
-                                                        disabled={!newCommentText.trim()}
-                                                    >
-                                                        Publicar Comentario
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
-                                <div className={styles.noDocSelected}>
-                                    <div style={{ textAlign: 'center' }}>
-                                        <FileText size={48} color="var(--border-color)" style={{ marginBottom: 16 }} />
-                                        <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Seleccione un documento o cargue uno nuevo</p>
+                                            <Link2 size={14} aria-hidden="true" /> Ver cadena
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={styles.btnLink}
+                                            onClick={() => {
+                                                const categoryId = selectedDoc.tematica || 'Sin Categorizar';
+                                                if (selectedCategory !== categoryId) setSelectedCategory(categoryId);
+                                                setChainViewNodeId(null);
+                                                setSelectedDoc(null);
+                                            }}
+                                            title="Ver todas las clases de esta temática"
+                                        >
+                                            <LayoutGrid size={14} aria-hidden="true" /> Ver temática
+                                        </button>
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                )}
-            </div>
+                        </section>
 
-            {/* FLOATING CREATION MODAL */}
+                        {/* DOCUMENT */}
+                        <article className={`${styles.previewContainer} ${isExpanded ? styles.previewExpanded : ''}`}>
+                            {isExpanded && (
+                                <button type="button" className={styles.collapseBtn} onClick={() => setIsExpanded(false)}>
+                                    <Minimize2 size={16} aria-hidden="true" /> Contraer
+                                </button>
+                            )}
+                            {selectedDoc.file_type === 'pdf' && selectedDoc.file_url && (
+                                <iframe src={selectedDoc.file_url} width="100%" height="100%" title="Vista previa del PDF" />
+                            )}
+                            {selectedDoc.file_type === 'word' && (
+                                <div className={styles.wordPreview}>
+                                    {selectedDoc.file_url && <div style={{ marginBottom: 10 }}><a href={selectedDoc.file_url} target="_blank" rel="noreferrer">Descargar original (.docx)</a></div>}
+                                    {selectedDoc.content || 'Vista previa no disponible.'}
+                                </div>
+                            )}
+                            {selectedDoc.file_type === 'gdoc' && selectedDoc.file_url && (
+                                <iframe
+                                    src={selectedDoc.file_url.includes('/edit') ? selectedDoc.file_url.replace(/\/edit.*$/, '/preview') : selectedDoc.file_url}
+                                    width="100%"
+                                    height="100%"
+                                    title="Vista previa de Google Docs"
+                                />
+                            )}
+                            {selectedDoc.file_type === 'editor' && (
+                                <div className={styles.editorWrapper}>
+                                    <RichTextEditor
+                                        content={previewVersion ? (previewVersion.content || '') : (selectedDoc.content || '')}
+                                        onSave={(newContent) => handleAutoSave(selectedDoc.id, newContent)}
+                                        readOnly={!canEditSelected || !!previewVersion}
+                                        onSelectionChange={canEditSelected ? handleEditorSelectionChange : undefined}
+                                        selectionReplace={pendingReplace}
+                                        onSelectionReplaceDone={() => {
+                                            setPendingReplace(null);
+                                            setPendingReplacement(null);
+                                            setEditorSelection(null);
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </article>
+                    </div>
+                </div>
+            )}
+
+            {/* CREATION MODAL */}
             {isCreating && (
                 <div className={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) { setIsCreating(false); setPendingChainFromDocId(null); setSelectedTemplate(null); } }}>
-                    <div className={styles.uploadModal}>
+                    <div className={styles.uploadModal} role="dialog" aria-modal="true" aria-labelledby="create-title">
                         <div className={styles.modalHeader}>
-                            <h2>{pendingChainFromDocId ? '🔗 Nueva Clase Encadenada' : 'Nueva Clase'}</h2>
-                            <button className={styles.closeBtn} onClick={() => { setIsCreating(false); setPendingChainFromDocId(null); setSelectedTemplate(null); }}>
-                                <X size={20} />
+                            <h2 id="create-title">{pendingChainFromDocId ? 'Nueva clase encadenada' : 'Nueva clase'}</h2>
+                            <button className={styles.closeBtn} aria-label="Cerrar" onClick={() => { setIsCreating(false); setPendingChainFromDocId(null); setSelectedTemplate(null); }}>
+                                <X size={20} aria-hidden="true" />
                             </button>
                         </div>
                         <div className={styles.uploadSection}>
-                            <input
-                                type="text"
-                                placeholder="Título de la clase o material"
-                                value={uploadTitle}
-                                onChange={e => setUploadTitle(e.target.value)}
-                                autoFocus
-                            />
-                            {/* Template selector — only show for editor type or when none selected yet */}
-                            <div style={{ marginBottom: '12px' }}>
-                                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 8px' }}>
-                                    Partir de una plantilla IA (opcional):
-                                </p>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <div className={styles.field}>
+                                <label htmlFor="c-title" className={styles.fieldLabel}>Título</label>
+                                <input
+                                    id="c-title"
+                                    type="text"
+                                    className={styles.input}
+                                    placeholder="Título de la clase o material"
+                                    value={uploadTitle}
+                                    onChange={e => setUploadTitle(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className={styles.field}>
+                                <span className={styles.fieldLabel}>Partir de una plantilla IA (opcional)</span>
+                                <div className={styles.chipRow}>
                                     {QUICK_TEMPLATES.map(t => (
                                         <button
                                             key={t.id}
                                             type="button"
+                                            aria-pressed={selectedTemplate === t.id}
+                                            className={`${styles.chip} ${selectedTemplate === t.id ? styles.chipSelected : ''}`}
                                             onClick={() => {
                                                 const next = selectedTemplate === t.id ? null : t.id;
                                                 setSelectedTemplate(next);
@@ -1598,94 +1429,106 @@ export function DocumentEditor() {
                                                     setUploadTitle(`Clase de ${t.name}`);
                                                 }
                                             }}
-                                            style={{
-                                                padding: '6px 12px',
-                                                borderRadius: '20px',
-                                                border: `1px solid ${selectedTemplate === t.id ? 'var(--primary-color)' : 'var(--border-color)'}`,
-                                                background: selectedTemplate === t.id ? 'var(--primary-light, #eff6ff)' : 'white',
-                                                cursor: 'pointer',
-                                                fontSize: '0.8rem',
-                                                fontWeight: selectedTemplate === t.id ? 700 : 400,
-                                                color: selectedTemplate === t.id ? 'var(--primary-color)' : 'var(--text-primary)',
-                                            }}
                                         >
-                                            {t.icon} {t.name}
+                                            {t.name}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <select value={uploadType} onChange={(e: any) => setUploadType(e.target.value)}>
-                                <option value="editor">Editor de Texto Integrado</option>
-                                <option value="word">Documento Word (.docx)</option>
-                                <option value="pdf">Archivo PDF</option>
-                                <option value="gdoc">Enlace Google Docs</option>
-                            </select>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', marginBottom: '12px' }}>
-                                <select value={uploadCategory} onChange={(e: any) => setUploadCategory(e.target.value)} style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%' }}>
-                                    <option value="">-- Sin Temática --</option>
-                                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            <div className={styles.field}>
+                                <label htmlFor="c-type" className={styles.fieldLabel}>Formato</label>
+                                <select id="c-type" className={styles.input} value={uploadType} onChange={(e: any) => setUploadType(e.target.value)}>
+                                    <option value="editor">Editor de texto integrado</option>
+                                    <option value="word">Documento Word (.docx)</option>
+                                    <option value="pdf">Archivo PDF</option>
+                                    <option value="gdoc">Enlace de Google Docs</option>
                                 </select>
+                            </div>
+
+                            <div className={styles.fieldGrid}>
+                                <div className={styles.field}>
+                                    <label htmlFor="c-cat" className={styles.fieldLabel}>Temática</label>
+                                    <select id="c-cat" className={styles.input} value={uploadCategory} onChange={(e: any) => setUploadCategory(e.target.value)}>
+                                        <option value="">Sin temática</option>
+                                        {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className={styles.field}>
+                                    <label htmlFor="c-num" className={styles.fieldLabel}>Clase N°</label>
+                                    <input
+                                        id="c-num"
+                                        type="text"
+                                        className={styles.input}
+                                        placeholder="Ej: 1 o 1.5"
+                                        value={creationNumClase}
+                                        onChange={e => setCreationNumClase(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className={styles.field}>
+                                <label htmlFor="c-tags" className={styles.fieldLabel}>Etiquetas (opcional)</label>
                                 <input
+                                    id="c-tags"
                                     type="text"
-                                    placeholder="N° de Clase (Ej: 1 o 1.5)"
-                                    value={creationNumClase}
-                                    onChange={e => setCreationNumClase(e.target.value)}
-                                    style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%' }}
+                                    className={styles.input}
+                                    placeholder="Separadas por coma"
+                                    value={uploadTags}
+                                    onChange={e => setUploadTags(e.target.value)}
                                 />
                             </div>
 
-                            <input
-                                type="text"
-                                placeholder="Etiquetas (opcional, separadas por coma)"
-                                value={uploadTags}
-                                onChange={e => setUploadTags(e.target.value)}
-                                style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%', marginBottom: '12px' }}
-                            />
-
                             {(uploadType === 'word' || uploadType === 'pdf') && (
-                                <input type="file" accept={uploadType === 'word' ? ".docx" : ".pdf"} onChange={handleFileUploadChange} style={{ marginBottom: '12px', width: '100%' }} />
+                                <div className={styles.field}>
+                                    <label htmlFor="c-file" className={styles.fieldLabel}>Archivo</label>
+                                    <input id="c-file" type="file" accept={uploadType === 'word' ? '.docx' : '.pdf'} onChange={handleFileUploadChange} />
+                                </div>
                             )}
 
                             {uploadType === 'gdoc' && (
-                                <input type="url" placeholder="URL de Google Docs Pública" value={gdocUrl} onChange={e => setGdocUrl(e.target.value)} style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', width: '100%', marginBottom: '12px' }} />
+                                <div className={styles.field}>
+                                    <label htmlFor="c-url" className={styles.fieldLabel}>URL pública de Google Docs</label>
+                                    <input id="c-url" type="url" className={styles.input} placeholder="https://docs.google.com/..." value={gdocUrl} onChange={e => setGdocUrl(e.target.value)} />
+                                </div>
                             )}
 
-                            <button className={styles.btnPrimary} onClick={handleSaveDocument} disabled={loading} style={{ marginTop: 12, padding: '12px' }}>
-                                {loading ? 'Subiendo...' : 'Crear y Publicar'}
+                            <button className={`${styles.btnPrimary} ${styles.btnBlock}`} onClick={handleSaveDocument} disabled={loading}>
+                                {loading ? 'Subiendo...' : 'Crear y publicar'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* FLOATING BULK IMPORT MODAL */}
+            {/* BULK IMPORT MODAL */}
             {showBulkImport && (
                 <div className={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) { setShowBulkImport(false); } }}>
-                    <div className={styles.uploadModal} style={{ maxWidth: '600px', width: '90%' }}>
+                    <div className={`${styles.uploadModal} ${styles.uploadModalWide}`} role="dialog" aria-modal="true" aria-labelledby="import-title">
                         <div className={styles.modalHeader}>
-                            <h2>Importación Masiva por IA (JSON)</h2>
-                            <button className={styles.closeBtn} onClick={() => setShowBulkImport(false)}>
-                                <X size={20} />
+                            <h2 id="import-title">Importar clases desde JSON</h2>
+                            <button className={styles.closeBtn} aria-label="Cerrar" onClick={() => setShowBulkImport(false)}>
+                                <X size={20} aria-hidden="true" />
                             </button>
                         </div>
                         <div className={styles.uploadSection}>
-                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                                Pega aquí el código JSON generado por tu IA externa (ChatGPT, Gemini, etc.). Debe ser un arreglo de objetos.
-                            </p>
+                            <label htmlFor="bulk-json" className={styles.modalHint}>
+                                Pegá el JSON generado por tu IA externa (ChatGPT, Gemini, etc.). Tiene que ser un arreglo de objetos.
+                            </label>
                             <textarea
+                                id="bulk-json"
+                                className={`${styles.textarea} ${styles.codeArea}`}
                                 value={bulkImportJson}
                                 onChange={(e) => setBulkImportJson(e.target.value)}
-                                placeholder="[ { &quot;title&quot;: &quot;Clase 1&quot;, &quot;tematica&quot;: &quot;Historia&quot;, ... } ]"
-                                style={{ width: '100%', minHeight: '250px', padding: '12px', fontSize: '0.85rem', fontFamily: 'monospace', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', resize: 'vertical' }}
+                                placeholder='[ { "title": "Clase 1", "tematica": "Historia", ... } ]'
                                 autoFocus
                             />
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+                            <div className={styles.modalActions}>
                                 <button className={styles.btnSecondary} onClick={() => setShowBulkImport(false)} disabled={loading}>
                                     Cancelar
                                 </button>
                                 <button className={styles.btnPrimary} onClick={handleBulkImport} disabled={loading || !bulkImportJson.trim()}>
-                                    {loading ? 'Importando...' : 'Procesar e Importar'}
+                                    {loading ? 'Importando...' : 'Procesar e importar'}
                                 </button>
                             </div>
                         </div>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDocumentStore } from '../../store/useDocumentStore';
 import { supabase } from '../../lib/supabase';
-import { MessageSquare, Send, User } from 'lucide-react';
+import { MessageSquare, Send } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import styles from './CommentsThread.module.css';
@@ -61,26 +61,19 @@ export function CommentsThread() {
 
     return (
         <div className={styles.container}>
-            <div className={styles.header}>
-                <MessageSquare size={18} />
-                <h3>Sugerencias y Mejoras</h3>
-            </div>
-
             <div className={styles.commentsList}>
                 {comments.length === 0 ? (
-                    <div className={styles.emptyState}>No hay sugerencias en esta planificación aún.</div>
+                    <div className={styles.emptyState}>
+                        <MessageSquare size={20} aria-hidden="true" />
+                        Todavía no hay comentarios en esta clase.
+                    </div>
                 ) : (
                     comments.map(c => (
                         <div key={c.id} className={styles.commentItem}>
-                            <div className={styles.commentHeader}>
-                                <div className={styles.avatar}>
-                                    <User size={14} />
-                                </div>
-                                <div className={styles.authorInfo}>
-                                    <span className={styles.authorName}>{c.author_name}</span>
-                                </div>
-                                <span className={styles.time}>{formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: es })}</span>
-                            </div>
+                            <span className={styles.commentHeader}>
+                                <span className={styles.authorName}>{c.author_name}</span>
+                                <span className={styles.time}>· {formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: es })}</span>
+                            </span>
                             <p className={styles.commentText}>{c.text}</p>
                         </div>
                     ))
@@ -88,14 +81,16 @@ export function CommentsThread() {
             </div>
 
             <form className={styles.inputArea} onSubmit={handleAddComment}>
-                <input
-                    type="text"
-                    placeholder="Escribe una sugerencia..."
+                <label htmlFor="new-comment" className={styles.inputLabel}>Nuevo comentario</label>
+                <textarea
+                    id="new-comment"
+                    rows={3}
+                    placeholder="Escribí un comentario o sugerencia sobre esta clase"
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                 />
                 <button type="submit" disabled={!newComment.trim()}>
-                    <Send size={16} />
+                    <Send size={16} aria-hidden="true" /> Publicar
                 </button>
             </form>
         </div>

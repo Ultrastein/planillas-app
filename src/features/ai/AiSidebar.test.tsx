@@ -9,6 +9,11 @@ vi.mock('lucide-react', () => ({
     ShieldAlert: () => <div>ShieldAlert</div>,
     Package: () => <div>Package</div>,
     Send: () => <div>Send</div>,
+    ScanSearch: () => null,
+    ClipboardList: () => null,
+    Lightbulb: () => null,
+    PenLine: () => null,
+    FileText: () => null,
 }));
 
 vi.mock('./aiService', () => ({
@@ -46,22 +51,22 @@ describe('AiSidebar', () => {
 
     it('shows all 4 tab buttons', () => {
         render(<AiSidebar />);
-        expect(screen.getByText('✨ Generar')).toBeInTheDocument();
-        expect(screen.getByText('🔍 Analizar')).toBeInTheDocument();
-        expect(screen.getByText('🛠️ Mejorar')).toBeInTheDocument();
-        expect(screen.getByText('💬 Chat')).toBeInTheDocument();
+        expect(screen.getByText('Generar')).toBeInTheDocument();
+        expect(screen.getByText('Analizar')).toBeInTheDocument();
+        expect(screen.getByText('Mejorar')).toBeInTheDocument();
+        expect(screen.getByText('Chat')).toBeInTheDocument();
     });
 
     it('shows empty state in Analizar tab when no doc selected', () => {
         render(<AiSidebar />);
-        fireEvent.click(screen.getByText('🔍 Analizar'));
+        fireEvent.click(screen.getByText('Analizar'));
         expect(screen.getByText(/Abrí una planificación para analizarla/i)).toBeInTheDocument();
     });
 
     it('shows global chat mode message when no doc is selected', () => {
         useDocumentStore.setState({ allDocuments: [{ id: '1', title: 'Clase 1', tematica: 'Robótica', grado: '3ro', author_name: 'Prof X' }] });
         render(<AiSidebar />);
-        fireEvent.click(screen.getByText('💬 Chat'));
+        fireEvent.click(screen.getByText('Chat'));
         expect(screen.getByText(/1 planificaciones disponibles/i)).toBeInTheDocument();
     });
 });
