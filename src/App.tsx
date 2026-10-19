@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './store/useAuthStore';
 import { AuthPage } from './features/auth/AuthPage';
-import { supabase } from './lib/supabase';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { DesktopLayout } from './layouts/DesktopLayout';
 import { AdminPanel } from './features/admin/AdminPanel';
 import { DocumentEditor } from './features/editor/DocumentEditor';
@@ -14,6 +14,10 @@ function App() {
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
     // Check active session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -38,6 +42,17 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, [setUser, fetchProfile, setLoading]);
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.5 }}>
+        <div style={{ maxWidth: 420 }}>
+          <h1 style={{ fontSize: 22, color: 'var(--text-primary)', marginBottom: 8 }}>Falta configurar Supabase</h1>
+          <p>Esta versión se publicó sin <code>VITE_SUPABASE_URL</code> o <code>VITE_SUPABASE_ANON_KEY</code>. Cargá el secreto en GitHub (Settings → Secrets and variables → Actions) y volvé a correr el deploy.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'var(--text-secondary)', fontSize: 15 }}>Cargando TecnoKids Planillas...</div>;
